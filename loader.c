@@ -175,7 +175,6 @@ uint32_t rom_load(char *name)
 	if (cart.banked)
 		printf("Detected banked cartridge. Enabling banking.\n");
 
-
 	return 1;
 
 error:
