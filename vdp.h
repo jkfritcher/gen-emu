@@ -1,7 +1,10 @@
+/* $Id$ */
+
 #ifndef __gen_vdp_h
 #define __gen_vdp_h
 
 #include "gen-emu.h"
+#include "cart.h"
 
 #define mask_Fifo_Empty 0x200
 #define mask_Fifo_Fill 0x100
@@ -14,23 +17,21 @@
 #define mask_DMA_in_progress 0x02
 #define mask_PAL_mode_flag 0x01
 
-struct VDP
+struct vdp_s
 {
-	uint8_t write_pending;
-	uint16_t status;
-	uint16_t hv;
-
-	uint8_t code;	
-	uint16_t addr;
+	uint8_t regs[32];		/* Only first 23 used, rest are address padding. */
+	uint8_t vram[65536];
+	uint16_t cram[64];
+	uint16_t vsram[64];		/* Only first 40 used. rest are address padding. */
 
 	uint32_t control;
 
-	uint8_t regs[23];
+	uint16_t status;
+	uint16_t hv;
 
-	uint8_t vram[65536];
-	uint16_t *vram16;
-	uint16_t cram[64];
-	uint16_t vsram[40];
+	uint16_t addr;
+	uint8_t code;
+	uint8_t write_pending;
 };
 
 //bool_t write_pending;
@@ -63,5 +64,7 @@ struct VDP
 
 uint16_t vdp_control_read(void);
 uint16_t vdp_data_read(void);
+void vdp_control_write(uint16_t);
+void vdp_data_write(uint16_t);
 
 #endif // __gen_vdp_h
