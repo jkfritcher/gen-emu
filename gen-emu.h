@@ -20,4 +20,8 @@ typedef volatile unsigned int	vuint32_t;
 
 extern uint8_t debug;
 
+/* From misc.s */
+uint16_t endswaps(uint16_t);
+uint32_t endswapl(uint32_t);
+
 #endif /* _GEN_EMU_H_ */
