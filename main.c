@@ -4,6 +4,7 @@
 
 #include "m68k.h"
 #include "z80.h"
+#include "vdp.h"
 #include "SN76489.h"
 #include "input.h"
 
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
 		run_one_field();
 		cont = maple_dev_status(caddr);
 		if (cont->buttons & CONT_A)
-			debug = 1;
+			debug = !debug;
 	} while (!(cont->buttons & CONT_START) && !quit);
 
 	fd = fs_open("/pc/home/jkf/src/dc/gen-emu/68kram.bin", O_WRONLY | O_TRUNC);
@@ -88,6 +89,8 @@ void run_one_field(void)
 
 	/* sound stuff, call once per frame */
 	Sync76489(&PSG,SN76489_FLUSH);
+
+	display_cram();
 
 	/* input processing */
 	cnt++;
