@@ -78,6 +78,11 @@ void vdp_control_write(uint16_t val)
 							if(vdp.addr > 0x7f)
 								break;
 						} while(--len);
+						for(len = 0; len < 64; len++)
+							vdp.dc_cram[len] = 
+								(((vdp.cram[len] & 0x000e) << 12) |
+								 ((vdp.cram[len] & 0x00e0) << 3) |
+								 ((vdp.cram[len] & 0x0e00) >> 7));
 						break;
 					case 0x05:
 						/* vsram */
@@ -139,6 +144,10 @@ void vdp_data_write(uint16_t val)
 		break;
 	case 0x03:
 		vdp.cram[(vdp.addr >> 1) & 0x3f] = val;
+		vdp.dc_cram[(vdp.addr >> 1) & 0x3f] = 
+			(((val & 0x000e) << 12) |
+			 ((val & 0x00e0) << 3) |
+			 ((val & 0x0e00) >> 7));
 		vdp.addr += 2;
 		break;
 	case 0x05:
