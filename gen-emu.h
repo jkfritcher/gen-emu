@@ -18,10 +18,12 @@ typedef volatile unsigned char	vuint8_t;
 typedef volatile unsigned short	vuint16_t;
 typedef volatile unsigned int	vuint32_t;
 
+
 extern uint8_t debug;
+extern uint8_t quit;
 
 /* From misc.s */
-uint16_t endswaps(uint16_t);
-uint32_t endswapl(uint32_t);
+extern uint16_t endswaps(uint16_t);
+extern uint32_t endswapl(uint32_t);
 
 #endif /* _GEN_EMU_H_ */
