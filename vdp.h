@@ -69,5 +69,6 @@ uint16_t vdp_data_read(void);
 void vdp_control_write(uint16_t);
 void vdp_data_write(uint16_t);
 void vdp_interrupt(int line);
+uint16_t vdp_hv_read(void);
 
 #endif // __gen_vdp_h
