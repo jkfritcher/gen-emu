@@ -1,5 +1,5 @@
 
-# $Id: Makefile.kos,v 1.1 2002-04-24 06:59:18 jkf Exp $
+# $Id: Makefile.kos,v 1.2 2002-04-24 20:25:46 jkf Exp $
 
 # Build architecture
 KOS_ARCH = dreamcast
@@ -9,7 +9,7 @@ KOS_CC_BASE = /usr/local/dcdev/sh-elf
 KOS_CC_PREFIX = sh-elf
 
 # KOS base paths
-KOS_BASE = /home/jkf/src/dc/kos-1.1.7
+KOS_BASE = /usr/local/dcdev/kos-1.1.7
 KOS_INCS = $(KOS_BASE)/include
 
 # Make utility
