@@ -1,0 +1,49 @@
+
+# $Id: Makefile.kos,v 1.1 2002-04-24 06:59:18 jkf Exp $
+
+# Build architecture
+KOS_ARCH = dreamcast
+
+# Compiler base strings
+KOS_CC_BASE = /usr/local/dcdev/sh-elf
+KOS_CC_PREFIX = sh-elf
+
+# KOS base paths
+KOS_BASE = /home/jkf/src/dc/kos-1.1.7
+KOS_INCS = $(KOS_BASE)/include
+
+# Make utility
+KOS_MAKE = gmake
+
+# Load utility
+KOS_LOADER = dc-tool -x
+
+# Genromfs utility
+KOS_GENROMFS = $(KOS_BASE)/utils/genromfs/genromfs
+
+# SH-4 GCC paths
+KOS_CC = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gcc
+KOS_CCPLUS = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-g++
+KOS_AS = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-as
+KOS_AR = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-ar
+KOS_OBJCOPY = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-objcopy
+KOS_LD = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-ld
+KOS_STRIP = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-strip
+#KOS_CFLAGS = -Wall -ml -m4-single-only -O2 -fno-builtin -fno-strict-aliasing -fomit-frame-pointer -fno-optimize-sibling-calls
+KOS_CFLAGS = -Wall -g -ml -m4-single-only -O0 -fno-builtin -fno-strict-aliasing -fomit-frame-pointer -fno-optimize-sibling-calls
+KOS_CPPFLAGS = -fno-operator-names -fno-rtti -fno-exceptions
+KOS_AFLAGS = -little
+KOS_LDFLAGS = -ml -m4-single-only -nostartfiles -nostdlib -Wl,-Ttext=0x8c010000
+
+# ARM7 GCC paths
+DC_ARM7BASE = /usr/local/dcdev/arm-elf
+DC_ARM7CC = $(DC_ARM7BASE)/bin/arm-elf-gcc
+DC_ARM7AS = $(DC_ARM7BASE)/bin/arm-elf-as
+DC_ARM7AR = $(DC_ARM7BASE)/bin/arm-elf-ar
+DC_ARM7OBJCOPY = $(DC_ARM7BASE)/bin/arm-elf-objcopy
+DC_ARM7LD = $(DC_ARM7BASE)/bin/arm-elf-ld
+#DC_ARM7CFLAGS = -mcpu=arm7 -Wall -O2
+DC_ARM7CFLAGS = -mcpu=arm7 -Wall -O0
+DC_ARM7AFLAGS = -marm7
+
+include $(KOS_BASE)/Makefile.rules
