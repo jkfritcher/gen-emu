@@ -1,4 +1,6 @@
 
+# $Id$
+
 CC = gcc
 CFLAGS = $(KOS_CFLAGS) -Iobj -I.
 
