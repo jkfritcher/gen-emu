@@ -175,11 +175,11 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 			ret = ((uint16_t *)cart.rom)[addr >> 1];
 		else
 			ret = *(uint16_t *)(cart.banks[(addr & 0x380000) >> 19] + (addr & 0x07ffff));
-		SWAPBYTES(ret);
+		SWAPBYTES16(ret);
 	} else
 	if (addr >= 0xe00000) {
 		ret = m68k_ram16[(addr & 0xffff) >> 1];
-		SWAPBYTES(ret);
+		SWAPBYTES16(ret);
 	} else
 	if ((addr >= 0xc00000) && (addr <= 0xdfffff)) {
 		/* vdp  & psg */
@@ -412,7 +412,7 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 		printf("M68K  %06x <- %04x\n", addr, val);
 
 	if (addr >= 0xe00000) {
-		SWAPBYTES(val);
+		SWAPBYTES16(val);
 		m68k_ram16[(addr & 0xffff)/2] = val;
 	} else
 	if ((addr >= 0xc00000) && (addr <= 0xdfffff)) {
