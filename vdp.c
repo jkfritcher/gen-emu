@@ -425,6 +425,108 @@ void vdp_render_plane(int line, int plane, int priority)
 	}
 }
 
+#define SWAP_WORDS(x) __asm__ volatile ("swap.w %0, %0" : "+r" (x))
+#define spr_start (vdp.vram + sn)
+
+void vdp_render_sprites(int line, int priority)
+{
+    uint8_t pixel;
+    uint16_t *pal;
+    uint32_t data;
+    uint32_t spr_ent_bot,spr_ent_top;
+    uint32_t c=0, cells=64, i=0, j, k, h,v, sp, sl, sh, sv, sn, sc, shf, svf;
+    sint32_t sx, sy;
+    uint64_t spr_ent;
+
+    if (!(vdp.dis_cells == 32))
+        cells = 80;
+
+    for(i=0;i<cells;i++)
+    {
+	spr_ent = vdp.sat[c];
+
+        spr_ent_bot = (spr_ent >> 32);
+	SWAP_WORDS(spr_ent_bot);
+        spr_ent_top = (spr_ent & 0x00000000ffffffff); 
+	SWAP_WORDS(spr_ent_top);
+
+        sy = ((spr_ent_top & 0x03FF0000) >> 16)-128;
+        sh = ((spr_ent_top & 0x00000C00) >> 10)+1;
+        sv = ((spr_ent_top & 0x00000300) >> 8)+1;
+
+        if((line >= sy) && (line < (sy+(sv<<3)))) 
+        {
+            sp = (spr_ent_bot & 0x80000000) >> 31;
+
+            if(sp == priority) 
+            {
+                svf = (spr_ent_bot & 0x10000000) >> 28;
+                shf = (spr_ent_bot & 0x08000000) >> 27;
+                sn = (spr_ent_bot & 0x07FF0000) >> 11;
+                sx = (spr_ent_bot & 0x000003FF)-128;		
+
+                sc = (spr_ent_bot & 0x60000000) >> 29;
+                pal = vdp.dc_cram + (sc << 4);	 
+
+                for(v = 0; v < sv; ++v) 
+                {
+		    for(k=0;k<8;k++)
+		    {
+                        if((sy+(v<<3)+k) == line) 
+                        {
+                            for(h = 0; h < sh; ++h) 
+                            {
+                                if (svf) 
+				{
+                                    if(shf)
+                                        data = *(uint32_t *)(spr_start + (((sv*(sh-h-1))+(sv-v-1))<<5) + (28 - (k << 2)));
+                                    else
+                                        data = *(uint32_t *)(spr_start + (((sv*h)+(sv-v-1))<<5) + (28 - (k << 2)));
+                                }
+                                else 
+				{
+                                    if(shf)
+                                        data = *(uint32_t *)(spr_start + (((sv*(sh-h-1))+v)<<5) + (k << 2));
+                                    else
+                                        data = *(uint32_t *)(spr_start + (((sv*h)+v)<<5) + (k << 2));
+                                }
+                                SWAP_WORDS(data);
+
+                                if (shf) 
+				{
+				    for(j=0;j<8;j++)
+				    {
+                                        pixel = data & 0x0f;
+                                        data >>= 4;
+                                        if (pixel)	
+                                            ocr_vram[sx + j + (h<<3)] = pal[pixel];
+                                    }
+                                }
+                                else 
+				{
+				    for(j=0;j<8;j++)
+				    {
+                                        pixel = data >> 28;
+                                        data <<= 4;
+                                        if (pixel)
+                                            ocr_vram[sx + j + (h<<3)] = pal[pixel];
+                                    }
+                                }
+			    }
+                        }
+                    }
+                }	
+            }
+        }
+
+        sl = (spr_ent_top & 0x0000007F);	
+        if(sl)
+            c = sl;
+        else
+            break;			
+    }
+}
+
 void vdp_render_scanline(int line)
 {
 	int i;
@@ -436,10 +538,10 @@ void vdp_render_scanline(int line)
 	if (vdp.regs[1] & 0x40) {
 		vdp_render_plane(line, 1, 0);
 		vdp_render_plane(line, 0, 0);
-//		vdp_render_sprites(line, 0);
-//		vdp_render_plane(line, 1, 1);
-//		vdp_render_plane(line, 0, 1);
-//		vdp_render_sprites(line, 1);
+		vdp_render_sprites(line, 0);
+		vdp_render_plane(line, 1, 1);
+		vdp_render_plane(line, 0, 1);
+		vdp_render_sprites(line, 1);
 	}
 
 	sq_cpy((((uint16_t *)display_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
