@@ -78,32 +78,6 @@ void SetChannels(int Volume,int Switch);
 /*************************************************************/
 void SetWave(int Channel,signed char *Data,int Length,int Rate);
 
-/** InitMIDI() ***********************************************/
-/** Initialize soundtrack logging into MIDI file FileName.  **/
-/** Repeated calls to InitMIDI() will close current MIDI    **/
-/** file and continue logging into a new one.               **/ 
-/*************************************************************/
-void InitMIDI(char *FileName);
-
-/** TrashMIDI() **********************************************/
-/** Finish logging soundtrack and close the MIDI file.      **/
-/*************************************************************/
-void TrashMIDI(void);
-
-/** MIDILogging() ********************************************/
-/** Turn soundtrack logging on/off and return its current   **/
-/** status. Possible values of Switch are MIDI_OFF (turn    **/
-/** logging off), MIDI_ON (turn logging on), MIDI_TOGGLE    **/
-/** (toggle logging), and MIDI_QUERY (just return current   **/
-/** state of logging).                                      **/
-/*************************************************************/
-int MIDILogging(int Switch);
-
-/** MIDITicks() **********************************************/
-/** Log N 1ms MIDI ticks.                                   **/
-/*************************************************************/
-void MIDITicks(int N);
-
 #ifdef UNIX
 #define SND_CHANNELS    16   /* Number of channels           */
 #define SND_SAMPLESIZE  256  /* Max. SetWave() sample size   */
