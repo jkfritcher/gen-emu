@@ -345,9 +345,9 @@ void vdp_render_cram(void)
 void vdp_render_plane(int line, int plane, int priority)
 {
 	int row, pixrow, i, j;
-	sint16_t hscroll;
+	sint16_t hscroll = 0;
 	uint16_t *p;
-	uint8_t  *tmp_line, col_off;
+	uint8_t  *tmp_line, col_off, pix_off;
 
 	tmp_line = (uint8_t *)0x7c002280;
 	p = plane ? vdp.bgb : vdp.bga;
@@ -369,6 +369,7 @@ void vdp_render_plane(int line, int plane, int priority)
 
 	hscroll = (0x400 - hscroll) & 0x3ff;
 	col_off = hscroll >> 3;
+	pix_off = hscroll & 0x7;
 
 	if ((vdp.regs[11] & 0x40) == 0)
 		line = (line + (vdp.vsram[(plane ? 1 : 0)] & 0x3ff)) % (vdp.sc_height << 3);
@@ -376,13 +377,9 @@ void vdp_render_plane(int line, int plane, int priority)
 	row = (line / 8) * vdp.sc_width;
 	pixrow = line % 8;
 
-	/* Prefetch the needed name table row for use below. */
-	for (i = 0; i < ((vdp.sc_width * 2) >> 5); i++)
-		__asm__ volatile ("pref @%0" : : "r" (&p[row+i*16]));
-
-	for(i = 0; i < (vdp.dis_cells + 1); i++) {
-		uint16_t name_ent = p[row + ((col_off + i) % vdp.sc_width)];
-		uint16_t ocr_off = i * 8;
+	i = 0;
+	while(i < (vdp.dis_cells * 8)) {
+		uint16_t name_ent = p[row + ((col_off + (i >> 3)) % vdp.sc_width)];
 		uint8_t pixel;
 
 		if ((name_ent >> 15) == priority) {
@@ -398,28 +395,31 @@ void vdp_render_plane(int line, int plane, int priority)
 			__asm__ volatile ("swap.w %0, %0" : "+r" (data));
 
 			if ((name_ent >> 11) & 0x1) {
-				for (j = 7; j >= 0; j--) {
-					pixel = data >> 28;
-					data <<= 4;
-					tmp_line[ocr_off + j] = pal | pixel;
+				for (j = 0; j < 8; j++) {
+					pixel = data & 0x0f;
+					data >>= 4;
+					if (pix_off > 0) {
+						pix_off--;
+						continue;
+					}
+					if (pixel)
+						ocr_vram[i + j] = vdp.dc_cram[pal | pixel];
+					i++;
 				}
 			} else {
 				for (j = 0; j < 8; j++) {
 					pixel = data >> 28;
 					data <<= 4;
-					tmp_line[ocr_off + j] = pal | pixel;
+					if (pix_off > 0) {
+						pix_off--;
+						continue;
+					}
+					if (pixel)
+						ocr_vram[i + j] = vdp.dc_cram[pal | pixel];
+					i++;
 				}
 			}
-		} else {
-			for (j = 0; j < 8; j++)
-				tmp_line[ocr_off + j] = 0;
 		}
-
-	}
-
-	for (i = 0, j = (hscroll & 7); i < (vdp.dis_cells * 8) ; i++) {
-		if (tmp_line[j + i] & 0xf)
-			ocr_vram[i] = vdp.dc_cram[tmp_line[j + i]];
 	}
 }
 
