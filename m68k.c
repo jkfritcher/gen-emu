@@ -13,8 +13,6 @@
 #include "vdp.h"
 #include "input.h"
 
-extern SN76489 PSG;
-
 uint8_t m68k_ram[65536];
 uint16_t *m68k_ram16 = (uint16_t *)m68k_ram;
 
@@ -60,13 +58,13 @@ uint32_t m68k_read_memory_8(uint32_t addr)
 			case 0x0a:
 			case 0x0c:
 			case 0x0e:
-//				ret = (vdp_hv_read() >> 8);
+				ret = (vdp_hv_read() >> 8);
 				break;
 			case 0x09:
 			case 0x0b:
 			case 0x0d:
 			case 0x0f:
-//				ret = (vdp_hv_read() & 0xff);
+				ret = (vdp_hv_read() & 0xff);
 				break;
 			}
 		}
@@ -204,7 +202,7 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 			case 0x0a:
 			case 0x0c:
 			case 0x0e:
-//				ret = vdp_hv_read();
+				ret = vdp_hv_read();
 				break;
 			}
 		}
