@@ -7,7 +7,6 @@
 
 static uint8_t outputs[3];
 static uint8_t outputs_mask[3];
-
 static maple_device_t *caddr[2];
 
 
@@ -15,6 +14,7 @@ void ctlr_init(void)
 {
 	caddr[0] = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
 	caddr[1] = maple_enum_type(1, MAPLE_FUNC_CONTROLLER);
+	caddr[2] = NULL;
 }
 
 void ctlr_reset(void)
@@ -34,17 +34,17 @@ uint8_t ctlr_data_reg_read(int port)
 
 		ret |= outputs[port];
 		if (outputs[port] & 0x40) {
-			ret |= ((cont->buttons & CONT_B) ? 0 : 1) << 5;
-			ret |= ((cont->buttons & (CONT_A | CONT_Y)) ? 0 : 1) << 4;
-			ret |= ((cont->buttons & CONT_DPAD_RIGHT) ? 0 : 1) << 3;
-			ret |= ((cont->buttons & CONT_DPAD_LEFT) ? 0 : 1) << 2;
-			ret |= ((cont->buttons & CONT_DPAD_DOWN) ? 0 : 1) << 1;
-			ret |= (cont->buttons & CONT_DPAD_UP) ? 0 : 1;
+			ret |= (cont->buttons & CONT_B) ? 0 : 0x20;
+			ret |= (cont->buttons & (CONT_A | CONT_Y)) ? 0 : 0x10;
+			ret |= (cont->buttons & CONT_DPAD_RIGHT) ? 0 : 0x08;
+			ret |= (cont->buttons & CONT_DPAD_LEFT) ? 0 : 0x04;
+			ret |= (cont->buttons & CONT_DPAD_DOWN) ? 0 : 0x02;
+			ret |= (cont->buttons & CONT_DPAD_UP) ? 0 : 0x01;
 		} else {
-			ret |= ((cont->buttons & CONT_START) ? 0 : 1) << 5;
-			ret |= ((cont->buttons & CONT_X) ? 0 : 1) << 4;
-			ret |= ((cont->buttons & CONT_DPAD_DOWN) ? 0 : 1) << 1;
-			ret |= (cont->buttons & CONT_DPAD_UP) ? 0 : 1;
+			ret |= (cont->buttons & CONT_START) ? 0 : 0x20;
+			ret |= (cont->buttons & CONT_X) ? 0 : 0x10;
+			ret |= (cont->buttons & CONT_DPAD_DOWN) ? 0 : 0x02;
+			ret |= (cont->buttons & CONT_DPAD_UP) ? 0 : 0x01;
 		}
 	} else {
 		ret = (~outputs_mask[port]) & 0x7f;
