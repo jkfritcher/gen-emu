@@ -11,9 +11,8 @@
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS | INIT_OCRAM);
 
 
-//char *romname = "/pc/home/jkf/src/dc/gen-emu/roms/ssf2-u.bin";
-//char *romname = "/pc/home/jkf/src/dc/gen-emu/roms/sonic-1.smd";
 char *romname = "/cd/sonic_1.bin";
+//char *romname = "/cd/pstar_2.bin";
 
 char *scrcapname = "/pc/home/jkf/src/dc/gen-emu/screen.ppm";
 
@@ -28,6 +27,7 @@ void gen_init(void);
 void gen_reset(void);
 
 extern SN76489 PSG; 
+extern struct vdp_s vdp;
 
 
 int main(int argc, char *argv[])
