@@ -11,8 +11,9 @@
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS | INIT_OCRAM);
 
 
-char *romname = "/cd/sonic_1.bin";
+//char *romname = "/cd/sonic_1.bin";
 //char *romname = "/cd/pstar_2.bin";
+char *romname = "/cd/contra.bin";
 
 char *scrcapname = "/pc/home/jkf/src/dc/gen-emu/screen.ppm";
 
@@ -58,6 +59,9 @@ paused:
 			break;
 		case 0x4600:	/* Print Screen */
 			vid_screen_shot(scrcapname);
+			fd = fs_open("/pc/home/jkf/src/dc/gen-emu/vdp.bin", O_WRONLY | O_TRUNC);
+			fs_write(fd, &vdp, sizeof(vdp));
+			fs_close(fd);
 			break;
 		}
 		if (pause)
