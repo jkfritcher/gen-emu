@@ -17,9 +17,6 @@ uint8_t m68k_ram[65536];
 uint16_t *m68k_ram16 = (uint16_t *)m68k_ram;
 
 
-#define SWAPBYTES(x)	__asm__ __volatile__ ( "swap.b %0, %0" : "=r" (x) )
-
-
 uint32_t m68k_read_memory_8(uint32_t addr)
 {
 	uint8_t ret = 0xff;
@@ -175,14 +172,14 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 
 	if (addr < 0x400000) {
 		if (!cart.banked)
-			ret = ((uint16_t *)cart.rom)[addr/2];
+			ret = ((uint16_t *)cart.rom)[addr >> 1];
 		else
 			ret = *(uint16_t *)(cart.banks[(addr & 0x380000) >> 19] + (addr & 0x07ffff));
-		ret = ((ret & 0xff) << 8) | (ret >> 8);
+		SWAPBYTES(ret);
 	} else
 	if (addr >= 0xe00000) {
-		ret = m68k_ram16[(addr & 0xffff)/2];
-		ret = ((ret & 0xff) << 8) | (ret >> 8);
+		ret = m68k_ram16[(addr & 0xffff) >> 1];
+		SWAPBYTES(ret);
 	} else
 	if ((addr >= 0xc00000) && (addr <= 0xdfffff)) {
 		/* vdp  & psg */
@@ -415,7 +412,7 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 		printf("M68K  %06x <- %04x\n", addr, val);
 
 	if (addr >= 0xe00000) {
-		val = ((val & 0xff) << 8) | (val >> 8);
+		SWAPBYTES(val);
 		m68k_ram16[(addr & 0xffff)/2] = val;
 	} else
 	if ((addr >= 0xc00000) && (addr <= 0xdfffff)) {
