@@ -11,16 +11,19 @@
 /**     changes to this file.                               **/
 /*************************************************************/
 
+#include "gen-emu.h"
 #include "SN76489.h"
 #include "Sound.h"
+
+SN76489 PSG;
 
 /** Reset76489() *********************************************/
 /** Reset the sound chip and use sound channels from the    **/
 /** one given in First.                                     **/
 /*************************************************************/
-void Reset76489(SN76489 *D,int First)
+void Reset76489(SN76489 *D,uint32_t First)
 {
-  register int J;
+  uint32_t J;
 
   for(J=0;J<4;J++) D->Volume[J]=D->Freq[J]=0;
 
@@ -45,9 +48,9 @@ void Reset76489(SN76489 *D,int First)
 /** noise channel with MIDI drums, OR second argument with  **/
 /** SN76489_DRUMS.                                          **/
 /*************************************************************/
-void Sync76489(SN76489 *D,byte Sync)
+void Sync76489(SN76489 *D,uint8_t Sync)
 {
-  register int J,I;
+  uint32_t J,I;
 
   /* Hit MIDI drums for noise channels, if requested */
   if(Sync&SN76489_DRUMS)
@@ -68,10 +71,10 @@ void Sync76489(SN76489 *D,byte Sync)
 /** Call this function to output a value V into the sound   **/
 /** chip.                                                   **/
 /*************************************************************/
-void Write76489(SN76489 *D,byte V)
+void Write76489(SN76489 *D,uint8_t V)
 {
-  register byte N,J;
-  register long L;
+  uint8_t N,J;
+  uint32_t L;
 
   switch(V&0xF0)
   {

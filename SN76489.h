@@ -21,31 +21,26 @@
 #define SN76489_FLUSH    2      /* Flush buffers only        */
 #define SN76489_DRUMS    0x80   /* Hit drums for noise chnl  */
 
-#ifndef BYTE_TYPE_DEFINED
-#define BYTE_TYPE_DEFINED
-typedef unsigned char byte;
-#endif
-
 /** SN76489 **************************************************/
 /** This data structure stores SN76489 state.               **/
 /*************************************************************/
 typedef struct
 {
-  int Channel;                 /* Current channel */
-  int Freq[SN76489_CHANNELS];  /* Frequencies (0 for off) */
-  int Volume[SN76489_CHANNELS]; /* Volumes (0..255) */
-  byte Sync;                   /* Sync mode */
-  byte NoiseMode;              /* Noise mode */
-  byte Buf;                    /* Latch to store a value */
-  byte Changed;                /* Bitmap of changed channels */
-  int First;                   /* First used Sound() channel */
+  uint32_t Channel;                 /* Current channel */
+  uint32_t Freq[SN76489_CHANNELS];  /* Frequencies (0 for off) */
+  uint32_t Volume[SN76489_CHANNELS]; /* Volumes (0..255) */
+  uint8_t Sync;                   /* Sync mode */
+  uint8_t NoiseMode;              /* Noise mode */
+  uint8_t Buf;                    /* Latch to store a value */
+  uint8_t Changed;                /* Bitmap of changed channels */
+  uint32_t First;                   /* First used Sound() channel */
 } SN76489;
 
 /** Reset76489() *********************************************/
 /** Reset the sound chip and use sound channels from the    **/
 /** one given in First.                                     **/
 /*************************************************************/
-void Reset76489(register SN76489 *D,int First);
+void Reset76489(register SN76489 *D,uint32_t First);
 
 /** Sync76489() **********************************************/
 /** Flush all accumulated changes by issuing Sound() calls, **/
@@ -55,14 +50,12 @@ void Reset76489(register SN76489 *D,int First);
 /** noise channel with MIDI drums, OR second argument with  **/
 /** SN76489_DRUMS.                                          **/
 /*************************************************************/
-void Sync76489(register SN76489 *D,register byte Sync);
+void Sync76489(register SN76489 *D,register uint8_t Sync);
 
 /** Write76489() *********************************************/
 /** Call this function to output a value V into the sound   **/
 /** chip.                                                   **/
 /*************************************************************/
-void Write76489(register SN76489 *D,register byte V);
-
-SN76489 PSG;
+void Write76489(register SN76489 *D,register uint8_t V);
 
 #endif /* SN76489_H */
