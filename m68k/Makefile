@@ -2,7 +2,7 @@
 # $Id$
 
 CC = gcc
-CFLAGS = $(KOS_CFLAGS) -Iobj -I.
+CFLAGS = $(KOS_CFLAGS) $(KOS_ALL_INCS) -Iobj -I.
 
 OBJS = obj/m68kcpu.o obj/m68kopac.o obj/m68kopdm.o obj/m68kopnz.o obj/m68kops.o
 
