@@ -164,7 +164,8 @@ uint32_t m68k_read_memory_8(uint32_t addr)
 		quit = 1;
 	}
 
-//	printf("M68K  %06x -> %02x\n", addr, ret);
+	if (debug)
+		printf("M68K  %06x -> %02x\n", addr, ret);
 
 	return(ret);
 }
@@ -293,7 +294,8 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 		quit = 1;
 	}
 
-//	printf("M68K  %06x -> %04x\n", addr, ret);
+	if (debug)
+		printf("M68K  %06x -> %04x\n", addr, ret);
 
 	return(ret);
 }
@@ -313,7 +315,8 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 	addr &= 0xffffff;
 	val &= 0xff;
 
-//	printf("M68K  %06x <- %02x\n", addr, val);
+	if (debug)
+		printf("M68K  %06x <- %02x\n", addr, val);
 
 	if (addr >= 0xe00000) {
 		m68k_ram[addr & 0xffff] = val;
@@ -412,7 +415,8 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 	addr &= 0xffffff;
 	val &= 0xffff;
 
-//	printf("M68K  %06x <- %04x\n", addr, val);
+	if (debug)
+		printf("M68K  %06x <- %04x\n", addr, val);
 
 	if (addr >= 0xe00000) {
 //		SWAPBYTES(val);

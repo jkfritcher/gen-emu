@@ -15,7 +15,7 @@ KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS);
 char *romname = "/pc/home/jkf/src/dc/gen-emu/roms/sonic-1.smd";
 //char *romname = "/cd/sonic_1.bin";
 
-uint8_t debug = 1;
+uint8_t debug = 0;
 uint8_t quit = 0;
 
 
@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
 	do {
 		run_one_field();
 		cont = maple_dev_status(caddr);
+		if (cont->buttons & CONT_A)
+			debug = 1;
 	} while (!(cont->buttons & CONT_START) && !quit);
 
 	fd = fs_open("/pc/home/jkf/src/dc/gen-emu/68kram.bin", O_WRONLY | O_TRUNC);
@@ -73,14 +75,16 @@ void run_one_field(void)
 
 
 	for(line = 0; line < 262 && !quit; line++) {
-//		vdp_interrupt(line);
+		vdp_interrupt(line);
 
 		m68k_execute(488);
 		if (z80_enabled())
 			z80_execute(228);
 
-		/* render scanline */
+		/* render scanline to vram*/
 	}
+
+	/* Submit whole screen to pvr. */
 
 	/* sound stuff, call once per frame */
 	Sync76489(&PSG,SN76489_FLUSH);

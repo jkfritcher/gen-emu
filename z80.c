@@ -64,9 +64,17 @@ UINT8 z80_read_mem(UINT32 addr)
 	} else
 	if ((addr >= 0x7f00) && (addr < 0x7f20)) {
 		/* vdp */
+	} else
+	if ((addr >= 0x4000) && (addr < 0x6000)) {
+		switch(addr & 0x3) {
+		case 0x0:
+			ret = 0x00;
+			break;
+		}
 	}
 
-//	printf("Z80   %04x -> %02x\n", addr, ret);
+	if (debug)
+		printf("Z80   %04x -> %02x\n", addr, ret);
 
 	return(ret);
 }
@@ -80,7 +88,8 @@ void z80_write_mem(UINT32 addr, UINT8 val)
 //		asm("trapa #0x20");
 //	}
 
-//	printf("Z80   %04x <- %02x\n", addr, val);
+	if (debug)
+		printf("Z80   %04x <- %02x\n", addr, val);
 
 	if (addr < 0x4000) {
 		z80_ram[addr & 0x1fff] = val;
@@ -91,6 +100,18 @@ void z80_write_mem(UINT32 addr, UINT8 val)
 	if ((addr >= 0x7f00) && (addr <= 0x7f1f)) {
 		/* vdp */
 	} else
+	if ((addr >= 0x4000) && (addr < 0x6000)) {
+		switch(addr & 0x3) {
+		case 0x0:
+			break;
+		case 0x1:
+			break;
+		case 0x2:
+			break;
+		case 0x3:
+			break;
+		}
+	}
 	if ((addr >= 0x6000) && (addr <= 0x60ff)) {
 		static uint32_t tmp_bank_base;
 		tmp_bank_base |= ((val & 0x01) << z80_bank_shift++);
