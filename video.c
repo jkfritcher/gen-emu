@@ -1,7 +1,9 @@
 #include <kos.h>
 
 #include "gen-emu.h"
+#include "vdp.h"
 
+extern struct vdp_s vdp;
 
 /* PVR data from vdp.c */
 extern pvr_poly_hdr_t disp_hdr[2];
@@ -20,11 +22,10 @@ void do_frame()
 	vert.oargb = 0x00000000;
 	vert.z = 1;
 
-	pvr_wait_ready();
-
 	display_txr = disp_txr[display_ptr];
 	display_ptr = (display_ptr ? 0 : 1);
 
+	pvr_wait_ready();
 	pvr_scene_begin();
 	pvr_list_begin(PVR_LIST_OP_POLY);
 
@@ -51,7 +52,7 @@ void do_frame()
 
 	vert.x = x + w;
 	vert.y = y + h;
-	vert.u = 320.0f/512.0f;
+	vert.u = ((vdp.regs[12] & 0x01) ? 320.0f : 256.0f)/512.0f;
 	vert.v = 240.0f/256.0f;
 	pvr_prim(&vert, sizeof(vert));
 
