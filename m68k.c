@@ -9,6 +9,7 @@
 #include "z80.h"
 
 #include "vdp.h"
+#include "input.h"
 
 
 uint8_t m68k_ram[65536];
@@ -81,28 +82,28 @@ uint32_t m68k_read_memory_8(uint32_t addr)
 
 		case 0x02:
 		case 0x03:		/* Data reg, port A */
-			ret = 0x7f;
+			ret = ctlr_data_reg_read(0);
 			break;
 		case 0x04:
 		case 0x05:		/* Data reg, port B */
-			ret = 0x7f;
+			ret = ctlr_data_reg_read(1);
 			break;
 		case 0x06:
 		case 0x07:		/* Data reg, port C */
-			ret = 0x7f;
+			ret = ctlr_data_reg_read(2);
 			break;
 
 		case 0x08:
 		case 0x09:		/* Cntl reg, port A */
-			ret = 0x00;
+			ret = ctlr_ctrl_reg_read(0);
 			break;
 		case 0x0a:
 		case 0x0b:		/* Cntl reg, port B */
-			ret = 0x00;
+			ret = ctlr_ctrl_reg_read(1);
 			break;
 		case 0x0c:
 		case 0x0d:		/* Cntl reg, port C */
-			ret = 0x00;
+			ret = ctlr_ctrl_reg_read(2);
 			break;
 
 		/* Port A */
@@ -218,23 +219,29 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 			break;
 
 		case 0x02:		/* Data reg, port A */
-			ret = 0x7f7f;
+			ret = ctlr_data_reg_read(0);
+			ret |= ret << 8;
 			break;
 		case 0x04:		/* Data reg, port B */
-			ret = 0x7f7f;
+			ret = ctlr_data_reg_read(1);
+			ret |= ret << 8;
 			break;
 		case 0x06:		/* Data reg, port C */
-			ret = 0x7f7f;
+			ret = ctlr_data_reg_read(2);
+			ret |= ret << 8;
 			break;
 
 		case 0x08:		/* Cntl reg, port A */
-			ret = 0x0000;
+			ret = ctlr_ctrl_reg_read(0);
+			ret |= ret << 8;
 			break;
 		case 0x0a:		/* Cntl reg, port B */
-			ret = 0x0000;
+			ret = ctlr_ctrl_reg_read(1);
+			ret |= ret << 8;
 			break;
 		case 0x0c:		/* Cntl reg, port C */
-			ret = 0x0000;
+			ret = ctlr_ctrl_reg_read(2);
+			ret |= ret << 8;
 			break;
 
 		/* Port A */
@@ -338,7 +345,34 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 			z80_write_mem(addr & 0x7fff, val & 0xff);
 	} else
 	if ((addr >= 0xa10000) && (addr <= 0xa1001f)) {
-		/* I/O write */
+		/* Controller I/O addresses. */
+		switch(addr & 0x1f) {
+		case 0x02:
+		case 0x03:		/* Data reg, port A */
+			ctlr_data_reg_write(0, val);
+			break;
+		case 0x04:
+		case 0x05:		/* Data reg, port B */
+			ctlr_data_reg_write(1, val);
+			break;
+		case 0x06:
+		case 0x07:		/* Data reg, port C */
+			ctlr_data_reg_write(2, val);
+			break;
+
+		case 0x08:
+		case 0x09:		/* Cntl reg, port A */
+			ctlr_ctrl_reg_write(0, val);
+			break;
+		case 0x0a:
+		case 0x0b:		/* Cntl reg, port B */
+			ctlr_ctrl_reg_write(1, val);
+			break;
+		case 0x0c:
+		case 0x0d:		/* Cntl reg, port C */
+			ctlr_ctrl_reg_write(2, val);
+			break;
+		}
 	} else
 	switch(addr) {
 	case 0xa11100:
