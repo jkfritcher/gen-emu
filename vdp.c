@@ -435,13 +435,29 @@ void vdp_render_sprites(int line, int priority)
     uint32_t data;
     uint32_t spr_ent_bot,spr_ent_top;
     uint32_t c=0, cells=64, i=0, j, k, h,v, sp, sl, sh, sv, sn, sc, shf, svf;
+    uint32_t dis_line=16;
+    uint32_t ppl=0;
+    uint32_t dis_ppl=256;
+    uint32_t sol=0;  
     sint32_t sx, sy;
+    sint32_t list_ordered[80];
     uint64_t spr_ent;
+
+    for(j=0;j<80;++j)
+        list_ordered[j]=-1;
 
     if (!(vdp.dis_cells == 32))
         cells = 80;
 
-    for(i=0;i<cells;i++)
+    if(cells == 80)
+    {
+	dis_line=20;	
+        dis_ppl=320;
+    }
+
+    vdp.status &= 0x0040; // not too sure about this... 
+
+    for(i=0;i<cells;++i)
     {
 	spr_ent = vdp.sat[c];
 
@@ -460,70 +476,101 @@ void vdp_render_sprites(int line, int priority)
 
             if(sp == priority) 
             {
-                svf = (spr_ent_bot & 0x10000000) >> 28;
-                shf = (spr_ent_bot & 0x08000000) >> 27;
-                sn = (spr_ent_bot & 0x07FF0000) >> 11;
-                sx = (spr_ent_bot & 0x000003FF)-128;		
+	        list_ordered[i]=c;
+	    }
 
-                sc = (spr_ent_bot & 0x60000000) >> 29;
-                pal = vdp.dc_cram + (sc << 4);	 
+            sol++;
+            ppl+=(sh<<3);
 
-                for(v = 0; v < sv; ++v) 
-                {
-		    for(k=0;k<8;k++)
-		    {
-                        if((sy+(v<<3)+k) == line) 
-                        {
-                            for(h = 0; h < sh; ++h) 
-                            {
-                                if (svf) 
-				{
-                                    if(shf)
-                                        data = *(uint32_t *)(spr_start + (((sv*(sh-h-1))+(sv-v-1))<<5) + (28 - (k << 2)));
-                                    else
-                                        data = *(uint32_t *)(spr_start + (((sv*h)+(sv-v-1))<<5) + (28 - (k << 2)));
-                                }
-                                else 
-				{
-                                    if(shf)
-                                        data = *(uint32_t *)(spr_start + (((sv*(sh-h-1))+v)<<5) + (k << 2));
-                                    else
-                                        data = *(uint32_t *)(spr_start + (((sv*h)+v)<<5) + (k << 2));
-                                }
-                                SWAP_WORDS(data);
+            if(!(sol < dis_line))
+            {
+     	        vdp.status |= 0x0040;
+		goto end;
+            }			
 
-                                if (shf) 
-				{
-				    for(j=0;j<8;j++)
-				    {
-                                        pixel = data & 0x0f;
-                                        data >>= 4;
-                                        if (pixel)	
-                                            ocr_vram[sx + j + (h<<3)] = pal[pixel];
-                                    }
-                                }
-                                else 
-				{
-				    for(j=0;j<8;j++)
-				    {
-                                        pixel = data >> 28;
-                                        data <<= 4;
-                                        if (pixel)
-                                            ocr_vram[sx + j + (h<<3)] = pal[pixel];
-                                    }
-                                }
-			    }
-                        }
-                    }
-                }	
-            }
+	    if(!(ppl < dis_ppl))
+	    {
+	        goto end;
+            } 		
         }
 
         sl = (spr_ent_top & 0x0000007F);	
         if(sl)
             c = sl;
         else
+end:
             break;			
+    }
+
+    for(i=0;i<cells;i++)
+    {
+        if( list_ordered[ ( 79 - ( (cells==64)?16:0 ) - i ) ] > -1 )
+        {
+	    spr_ent = vdp.sat[list_ordered[(79-((cells==64)?16:0)-i)]];
+	    spr_ent_bot = (spr_ent >> 32);
+	    SWAP_WORDS(spr_ent_bot);
+            spr_ent_top = (spr_ent & 0x00000000ffffffff); 
+	    SWAP_WORDS(spr_ent_top);
+
+            sy = ((spr_ent_top & 0x03FF0000) >> 16)-128;
+            sh = ((spr_ent_top & 0x00000C00) >> 10)+1;
+            sv = ((spr_ent_top & 0x00000300) >> 8)+1;
+            svf = (spr_ent_bot & 0x10000000) >> 28;
+            shf = (spr_ent_bot & 0x08000000) >> 27;
+            sn = (spr_ent_bot & 0x07FF0000) >> 11;
+            sx = (spr_ent_bot & 0x000003FF)-128;		
+            sc = (spr_ent_bot & 0x60000000) >> 29;
+            pal = vdp.dc_cram + (sc << 4);	 
+
+            for(v = 0; v < sv; ++v) 
+            {
+                for(k=0;k<8;k++)
+	        {
+                    if((sy+(v<<3)+k) == line) 
+                    {
+                        for(h = 0; h < sh; ++h) 
+                        {
+                            if (!svf) 
+			    {
+                                if(shf)
+                                    data = *(uint32_t *)(spr_start + (((sv*(sh-h-1))+v)<<5) + (k << 2));
+                                else
+                                    data = *(uint32_t *)(spr_start + (((sv*h)+v)<<5) + (k << 2));
+                            }
+                            else 
+			    {
+                                if(shf)
+                                    data = *(uint32_t *)(spr_start + (((sv*(sh-h-1))+(sv-v-1))<<5) + (28 - (k << 2)));
+                                else
+                                    data = *(uint32_t *)(spr_start + (((sv*h)+(sv-v-1))<<5) + (28 - (k << 2)));
+                            }
+                            SWAP_WORDS(data);
+
+                            if (shf) 
+                            {
+				for(j=0;j<8;j++)
+                                {
+                                    pixel = data & 0x0f;
+                                    data >>= 4;
+                                    if (pixel)	
+                                        ocr_vram[sx + j + (h<<3)] = pal[pixel];
+                                }
+                            }
+                            else 
+                            {
+				for(j=0;j<8;j++)
+                                {
+                                    pixel = data >> 28;
+                                    data <<= 4;
+                                    if (pixel)
+                                        ocr_vram[sx + j + (h<<3)] = pal[pixel];
+                                }
+                            }
+                        } 
+                    } 
+                } 
+            } 
+        }       
     }
 }
 
