@@ -1,5 +1,5 @@
 
-# $Id: Makefile.kos,v 1.4 2002-05-01 16:57:31 jkf Exp $
+# $Id: Makefile.kos,v 1.5 2002-06-10 22:03:33 jkf Exp $
 
 # Build architecture
 KOS_ARCH = dreamcast
@@ -9,7 +9,8 @@ KOS_CC_BASE = /home/dcdev/sh-elf
 KOS_CC_PREFIX = sh-elf
 
 # KOS base paths
-KOS_BASE = /home/dcdev/kos-1.1.7
+#KOS_BASE = /home/dcdev/kos-1.1.7
+KOS_BASE = /home/jkf/src/dc/kos/kos
 KOS_INCS = $(KOS_BASE)/include
 
 # Make utility
@@ -28,8 +29,8 @@ KOS_AR = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-ar
 KOS_OBJCOPY = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-objcopy
 KOS_LD = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-ld
 KOS_STRIP = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-strip
-#KOS_CFLAGS = -Wall -ml -m4-single-only -O2 -fno-builtin -fno-strict-aliasing -fomit-frame-pointer -fno-optimize-sibling-calls
-KOS_CFLAGS = -Wall -g -ml -m4-single-only -O0 -fno-builtin -fno-strict-aliasing -fomit-frame-pointer -fno-optimize-sibling-calls
+KOS_CFLAGS = -Wall -ml -m4-single-only -O2 -D_arch_$(KOS_ARCH) -fno-builtin -fno-strict-aliasing -fomit-frame-pointer -fno-optimize-sibling-calls
+#KOS_CFLAGS = -Wall -g -ml -m4-single-only -O0 -D_arch_$(KOS_ARCH)
 KOS_CPPFLAGS = -fno-operator-names -fno-rtti -fno-exceptions
 KOS_AFLAGS = -little
 KOS_LDFLAGS = -ml -m4-single-only -nostartfiles -nostdlib -Wl,-Ttext=0x8c010000
