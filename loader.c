@@ -113,11 +113,13 @@ uint32_t rom_load(char *name)
 	/* Check if this cart has save ram. */
 	if (rom[0x1b0] == 'R' && rom[0x1b1] == 'A') {
 		uint32_t sr_start, sr_end, sr_len;
-		uint8_t *sram;
+		uint8_t *sram = NULL;
 
 		/* Extract saveram details from ROM header. */
-		sr_start = endswapl(((uint32_t*)rom)[0x1b4/4]);
-		sr_end = endswapl(((uint32_t*)rom)[0x1b8/4]);
+		sr_start = ((uint32_t*)rom)[0x1b4/4];
+		sr_end = ((uint32_t*)rom)[0x1b8/4];
+		SWAPBYTES32(sr_start);
+		SWAPBYTES32(sr_end);
 		if (sr_start % 1)
 			sr_start -= 1;
 		if (!(sr_end % 1))
