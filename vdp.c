@@ -403,7 +403,7 @@ void vdp_render_plane(int line, int plane, int priority)
 						continue;
 					}
 					if (pixel)
-						ocr_vram[i + j] = vdp.dc_cram[pal | pixel];
+						ocr_vram[i] = vdp.dc_cram[pal | pixel];
 					i++;
 				}
 			} else {
@@ -415,7 +415,7 @@ void vdp_render_plane(int line, int plane, int priority)
 						continue;
 					}
 					if (pixel)
-						ocr_vram[i + j] = vdp.dc_cram[pal | pixel];
+						ocr_vram[i] = vdp.dc_cram[pal | pixel];
 					i++;
 				}
 			}
