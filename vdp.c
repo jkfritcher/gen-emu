@@ -11,10 +11,12 @@
 extern uint16_t *m68k_ram16;
 
 struct vdp_s vdp;
-pvr_poly_hdr_t disp_hdr;
-pvr_ptr_t disp_txr;
+pvr_poly_hdr_t disp_hdr[2];
+pvr_ptr_t disp_txr[2];
+pvr_ptr_t display_txr;
 pvr_poly_hdr_t cram_hdr;
 pvr_ptr_t cram_txr;
+uint8_t display_ptr;
 
 uint8_t nt_cells[4] = { 32, 64, 0, 128 };
 uint8_t mode_cells[4] = { 32, 40, 0, 40 };
@@ -26,15 +28,28 @@ static uint16_t *ocr_vram = (uint16_t *)0x7c002000;
 void vdp_init(void)
 {
 	pvr_poly_cxt_t cxt;
+	int filters;
+
+#if 0
+	filters = vid_check_cable() ? PVR_FILTER_NONE : PVR_FILTER_BILINEAR;
+#else
+	filters = PVR_FILTER_NONE;
+#endif
 
 	/* Allocate and build display texture data */
-	disp_txr = pvr_mem_malloc(512 * 256 * 2);
+	disp_txr[0] = pvr_mem_malloc(512 * 256 * 2);
+	disp_txr[1] = pvr_mem_malloc(512 * 256 * 2);
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY,
 		PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED,
-		512, 256, disp_txr,
-		(vid_check_cable() ? PVR_FILTER_NONE : PVR_FILTER_BILINEAR));
+		512, 256, disp_txr[0], filters);
+	pvr_poly_compile(&disp_hdr[0], &cxt);
+	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY,
+		PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED,
+		512, 256, disp_txr[1], filters);
+	pvr_poly_compile(&disp_hdr[1], &cxt);
+	display_txr = disp_txr[0];
+	display_ptr = 1;
 
-	pvr_poly_compile(&disp_hdr, &cxt);
 
 	/* Allocate and build cram texture data */
 	cram_txr = pvr_mem_malloc(8 * 8 * 2);
@@ -59,6 +74,7 @@ uint16_t vdp_control_read(void)
 	return ret;
 }
 
+/* val is little endian */
 void vdp_control_write(uint16_t val)
 {
 	if (debug)
@@ -66,8 +82,8 @@ void vdp_control_write(uint16_t val)
 
 	if((val & 0xc000) == 0x8000) {
 		if(!vdp.write_pending) {
-			vdp.regs[(val & 0x1f00) >> 8] = (val & 0xff);
-			switch((val & 0x1f00) >> 8) {
+			vdp.regs[(val >> 8) & 0x1f] = (val & 0xff);
+			switch((val >> 8) & 0x1f) {
 			case 0x02:	/* BGA */
 				vdp.bga = (uint16_t *)(vdp.vram + ((val & 0x38) << 10));
 				break;
@@ -80,12 +96,16 @@ void vdp_control_write(uint16_t val)
 			case 0x05:	/* SAT */
 				vdp.sat = (uint64_t *)(vdp.vram + ((val & 0x7f) << 9));
 				break;
+			case 0x07:
+				break;
 			case 0x0b:
-				printf("hscroll mode %d\n", vdp.regs[11]);
 				break;
 			case 0x0c:	/* Mode Set #4 */
-				vdp.dis_cells =  mode_cells[((vdp.regs[12] & 0x80) >> 7) |
-											((vdp.regs[12] & 0x01) << 1)];
+				vdp.dis_cells = mode_cells[((vdp.regs[12] & 0x01) << 1) |
+											(vdp.regs[12] >> 7)];
+				break;
+			case 0x0d:
+				vdp.hs_off = vdp.regs[13] << 10;
 				break;
 			case 0x10:	/* Scroll size */
 				vdp.sc_width = nt_cells[vdp.regs[16] & 0x03];
@@ -95,7 +115,7 @@ void vdp_control_write(uint16_t val)
 			vdp.code = 0x0000;
 		}
 	} else {
-		if(!vdp.write_pending) {
+		if (!vdp.write_pending) {
 			vdp.write_pending = 1;
 			vdp.addr = ((vdp.addr & 0xc000) | (val & 0x3fff));
 			vdp.code = ((vdp.code & 0x3c) | ((val & 0xc000) >> 14));
@@ -129,9 +149,9 @@ void vdp_control_write(uint16_t val)
 						/* vram */
 						do {
 							val = src_mem[src_off & src_mask];
-							SWAPBYTES(val);
+							SWAPBYTES16(val);
 							if (vdp.addr & 0x01)
-								SWAPBYTES(val);
+								SWAPBYTES16(val);
 							((uint16_t *)vdp.vram)[vdp.addr >> 1] = val;
 							vdp.addr += vdp.regs[15];
 							src_off += 1;
@@ -141,7 +161,7 @@ void vdp_control_write(uint16_t val)
 						/* cram */
 						do {
 							val = src_mem[src_off & src_mask];
-							SWAPBYTES(val);
+							SWAPBYTES16(val);
 							vdp.cram[vdp.addr >> 1] = val;
 							vdp.addr += vdp.regs[15];
 							src_off += 1;
@@ -159,7 +179,7 @@ void vdp_control_write(uint16_t val)
 						/* vsram */
 						do {
 							val = src_mem[src_off & src_mask];
-							SWAPBYTES(val);
+							SWAPBYTES16(val);
 							vdp.vsram[vdp.addr >> 1] = val;
 							vdp.addr += vdp.regs[15];
 							src_off += 1;
@@ -317,7 +337,6 @@ void vdp_interrupt(int line)
 	vdp.h_int_counter--;
 }
 
-
 void vdp_render_cram(void)
 {
 	sq_cpy(cram_txr, vdp.dc_cram, 128);
@@ -326,9 +345,34 @@ void vdp_render_cram(void)
 void vdp_render_plane(int line, int plane, int priority)
 {
 	int row, pixrow, i, j;
+	sint16_t hscroll;
 	uint16_t *p;
+	uint8_t  *tmp_line, col_off;
 
+	tmp_line = (uint8_t *)0x7c002280;
 	p = plane ? vdp.bgb : vdp.bga;
+
+	switch(vdp.regs[11] & 0x03) {
+	case 0x0:
+		hscroll = ((uint16_t *)vdp.vram)[(vdp.hs_off + (plane ? 2 : 0)) >> 1];
+		break;
+	case 0x1:
+		hscroll = ((uint16_t *)vdp.vram)[(vdp.hs_off + ((line & 0x7) << 1) + (plane ? 2 : 0)) >> 1];
+		break;
+	case 0x2:
+		hscroll = ((uint16_t *)vdp.vram)[(vdp.hs_off + ((line & ~0x7) << 1) + (plane ? 2 : 0)) >> 1];
+		break;
+	case 0x3:
+		hscroll = ((uint16_t *)vdp.vram)[(vdp.hs_off + (line << 2) + (plane ? 2 : 0)) >> 1];
+		break;
+	}
+
+	hscroll = (0x400 - hscroll) & 0x3ff;
+	col_off = hscroll >> 3;
+
+	if ((vdp.regs[11] & 0x40) == 0)
+		line = (line + (vdp.vsram[(plane ? 1 : 0)] & 0x3ff)) % (vdp.sc_height << 3);
+
 	row = (line / 8) * vdp.sc_width;
 	pixrow = line % 8;
 
@@ -336,60 +380,46 @@ void vdp_render_plane(int line, int plane, int priority)
 	for (i = 0; i < ((vdp.sc_width * 2) >> 5); i++)
 		__asm__ volatile ("pref @%0" : : "r" (&p[row+i*16]));
 
-	for(i = 0; i < vdp.dis_cells; i++) {
-		uint16_t name_ent = p[row + i];
+	for(i = 0; i < (vdp.dis_cells + 1); i++) {
+		uint16_t name_ent = p[row + ((col_off + i) % vdp.sc_width)];
 		uint16_t ocr_off = i * 8;
 		uint8_t pixel;
 
 		if ((name_ent >> 15) == priority) {
-			uint16_t *pal = vdp.dc_cram + (((name_ent >> 13) & 0x3) << 4);
 			uint32_t data;
+			uint32_t pal;
 
-			if ((name_ent >> 12) & 0x1) {
+			pal = (name_ent >> 9) & 0x30;
+
+			if ((name_ent >> 12) & 0x1)
 				data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (28 - (pixrow * 4)));
-				__asm__ volatile ("swap.w %0, %0" : "+r" (data));
+			else
+				data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (pixrow * 4));
+			__asm__ volatile ("swap.w %0, %0" : "+r" (data));
 
-				if ((name_ent >> 11) & 0x1) {
-					for (j = 7; j >= 0; j--) {
-						pixel = data >> 28;
-						data <<= 4;
-
-						if (pixel)
-							ocr_vram[ocr_off + j] = pal[pixel];
-					}
-
-				} else {
-					for (j = 0; j < 8; j++) {
-						pixel = data >> 28;
-						data <<= 4;
-
-						if (pixel)
-							ocr_vram[ocr_off + j] = pal[pixel];
-					}
+			if ((name_ent >> 11) & 0x1) {
+				for (j = 7; j >= 0; j--) {
+					pixel = data >> 28;
+					data <<= 4;
+					tmp_line[ocr_off + j] = pal | pixel;
 				}
 			} else {
-				data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (pixrow * 4));
-				__asm__ volatile ("swap.w %0, %0" : "+r" (data));
-
-				if ((name_ent >> 11) & 0x1) {
-					for (j = 7; j >= 0; j--) {
-						pixel = data >> 28;
-						data <<= 4;
-
-						if (pixel)
-							ocr_vram[ocr_off + j] = pal[pixel];
-					}
-				} else {
-					for (j = 0; j < 8; j++) {
-						pixel = data >> 28;
-						data <<= 4;
-
-						if (pixel)
-							ocr_vram[ocr_off + j] = pal[pixel];
-					}
+				for (j = 0; j < 8; j++) {
+					pixel = data >> 28;
+					data <<= 4;
+					tmp_line[ocr_off + j] = pal | pixel;
 				}
 			}
+		} else {
+			for (j = 0; j < 8; j++)
+				tmp_line[ocr_off + j] = 0;
 		}
+
+	}
+
+	for (i = 0, j = (hscroll & 7); i < (vdp.dis_cells * 8) ; i++) {
+		if (tmp_line[j + i] & 0xf)
+			ocr_vram[i] = vdp.dc_cram[tmp_line[j + i]];
 	}
 }
 
@@ -404,7 +434,9 @@ void vdp_render_scanline(int line)
 	if (vdp.regs[1] & 0x40) {
 		vdp_render_plane(line, 1, 0);
 		vdp_render_plane(line, 0, 0);
+		vdp_render_plane(line, 1, 1);
+		vdp_render_plane(line, 0, 1);
 	}
 
-	sq_cpy((((uint16_t *)disp_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
+	sq_cpy((((uint16_t *)display_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
 }
