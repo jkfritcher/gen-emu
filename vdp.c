@@ -31,20 +31,16 @@ void vdp_init(void)
 	disp_txr = pvr_mem_malloc(512 * 256 * 2);
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY,
 		PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED,
-#if 1
-		512, 256, disp_txr, PVR_FILTER_NONE);
-#else
 		512, 256, disp_txr,
 		(vid_check_cable() ? PVR_FILTER_NONE : PVR_FILTER_BILINEAR));
-#endif
 
 	pvr_poly_compile(&disp_hdr, &cxt);
 
 	/* Allocate and build cram texture data */
-	cram_txr = pvr_mem_malloc(64 * 64 * 2);
+	cram_txr = pvr_mem_malloc(8 * 8 * 2);
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY,
 		PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED,
-		64, 64, cram_txr, PVR_FILTER_NONE);
+		8, 8, cram_txr, PVR_FILTER_NONE);
 	pvr_poly_compile(&cram_hdr, &cxt);
 }
 
@@ -83,6 +79,9 @@ void vdp_control_write(uint16_t val)
 				break;
 			case 0x05:	/* SAT */
 				vdp.sat = (uint64_t *)(vdp.vram + ((val & 0x7f) << 9));
+				break;
+			case 0x0b:
+				printf("hscroll mode %d\n", vdp.regs[11]);
 				break;
 			case 0x0c:	/* Mode Set #4 */
 				vdp.dis_cells =  mode_cells[((vdp.regs[12] & 0x80) >> 7) |
@@ -321,16 +320,7 @@ void vdp_interrupt(int line)
 
 void vdp_render_cram(void)
 {
-    uint32_t x, y, i;
-
-    for(y = 0; y < 64; y++) {
-        i = y / 8;
-
-        for(x = 0; x < 64; x++)
-            ocr_vram[x] = vdp.dc_cram[(i * 8) + (x / 8)];
-
-        sq_cpy((((uint16_t *)cram_txr) + (y * 64)), ocr_vram, 128);
-    }
+	sq_cpy(cram_txr, vdp.dc_cram, 128);
 }
 
 void vdp_render_plane(int line, int plane, int priority)
@@ -411,8 +401,10 @@ void vdp_render_scanline(int line)
 	for (i = 0; i < (vdp.sc_width * 8); i++)
 		ocr_vram[i] = vdp.dc_cram[vdp.regs[7] & 0x3f];
 
-	vdp_render_plane(line, 1, 0);
-	vdp_render_plane(line, 0, 0);
+	if (vdp.regs[1] & 0x40) {
+		vdp_render_plane(line, 1, 0);
+		vdp_render_plane(line, 0, 0);
+	}
 
 	sq_cpy((((uint16_t *)disp_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
 }
