@@ -19,6 +19,7 @@ char *scrcapname = "/pc/home/jkf/src/dc/gen-emu/screen.ppm";
 uint8_t debug = 0;
 uint8_t quit = 0;
 uint8_t dump = 0;
+uint8_t pause = 0;
 
 uint32_t rom_load(char *name);
 void rom_free(void);
@@ -43,8 +44,12 @@ int main(int argc, char *argv[])
 	do {
 		run_one_field();
 
+paused:
 		ch = kbd_get_key();
 		switch(ch) {
+		case 0x000d:	/* Enter */
+			pause = !pause;
+			break;
 		case 0x0020:	/* Space */
 			quit = 1;
 			break;
@@ -55,6 +60,8 @@ int main(int argc, char *argv[])
 			vid_screen_shot(scrcapname);
 			break;
 		}
+		if (pause)
+			goto paused;
 	} while (!quit);
 
 	rom_free();
@@ -66,7 +73,6 @@ void run_one_field(void)
 {
 	static int cnt;
 	int line;
-
 
 	for(line = 0; line < 262 && !quit; line++) {
 		vdp_interrupt(line);
