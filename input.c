@@ -17,6 +17,14 @@ void ctlr_init(void)
 	caddr[1] = maple_enum_type(1, MAPLE_FUNC_CONTROLLER);
 }
 
+void ctlr_reset(void)
+{
+	int i;
+
+	for(i = 0; i < 3; i++)
+		outputs[i] = outputs_mask[i] = 0;
+}
+
 uint8_t ctlr_data_reg_read(int port)
 {
 	uint8_t ret = 0;
