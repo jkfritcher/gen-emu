@@ -6,10 +6,41 @@
 #include "vdp.h"
 #include "m68k.h"
 #include "z80.h"
+#include "cart.h"
 
+extern uint16_t *m68k_ram16;
 
 struct vdp_s vdp;
+pvr_poly_hdr_t disp_hdr;
+pvr_ptr_t disp_txr;
+pvr_poly_hdr_t cram_hdr;
+pvr_ptr_t cram_txr;
 
+uint8_t nt_cells[4] = { 32, 64, 0, 128 };
+uint8_t mode_cells[4] = { 32, 40, 0, 40 };
+
+
+static uint16_t *ocr_vram = (uint16_t *)0x7c002000;
+
+
+void vdp_init(void)
+{
+	pvr_poly_cxt_t cxt;
+
+	/* Allocate and build display texture data */
+	disp_txr = pvr_mem_malloc(512 * 256 * 2);
+	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY,
+		PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED,
+		512, 256, disp_txr, PVR_FILTER_NONE);
+	pvr_poly_compile(&disp_hdr, &cxt);
+
+	/* Allocate and build cram texture data */
+	cram_txr = pvr_mem_malloc(64 * 64 * 2);
+	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY,
+		PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED,
+		64, 64, cram_txr, PVR_FILTER_NONE);
+	pvr_poly_compile(&cram_hdr, &cxt);
+}
 
 uint16_t vdp_control_read(void)
 {
@@ -17,7 +48,6 @@ uint16_t vdp_control_read(void)
 
 	vdp.write_pending = 0;
 	m68k_set_irq(0);
-
 
 	ret |= (vdp.status & 0x00ff);
 
@@ -35,6 +65,28 @@ void vdp_control_write(uint16_t val)
 	if((val & 0xc000) == 0x8000) {
 		if(!vdp.write_pending) {
 			vdp.regs[(val & 0x1f00) >> 8] = (val & 0xff);
+			switch((val & 0x1f00) >> 8) {
+			case 0x02:	/* BGA */
+				vdp.bga = (uint16_t *)(vdp.vram + ((val & 0x38) << 10));
+				break;
+			case 0x03:	/* WND */
+				vdp.wnd = (uint16_t *)(vdp.vram + ((val & 0x3e) << 10));
+				break;
+			case 0x04:	/* BGB */
+				vdp.bgb = (uint16_t *)(vdp.vram + ((val & 0x07) << 13));
+				break;
+			case 0x05:	/* SAT */
+				vdp.sat = (uint64_t *)(vdp.vram + ((val & 0x7f) << 9));
+				break;
+			case 0x0c:	/* Mode Set #4 */
+				vdp.dis_cells =  mode_cells[((vdp.regs[12] & 0x80) >> 7) |
+											((vdp.regs[12] & 0x01) << 1)];
+				break;
+			case 0x10:	/* Scroll size */
+				vdp.sc_width = nt_cells[vdp.regs[16] & 0x03];
+				vdp.sc_height = nt_cells[(vdp.regs[16] & 0x30) >> 4];
+				break;
+			}
 			vdp.code = 0x0000;
 		}
 	} else {
@@ -60,9 +112,19 @@ void vdp_control_write(uint16_t val)
 					case 0x01:
 						/* vram */
 						do {
-							uint16_t val = m68k_read_memory_16(addr);
+							if (addr < 0x400000) {
+								val = ((uint16_t *)cart.rom)[addr >> 1];
+							} else
+							if (addr > 0xe00000) {
+								val = m68k_ram16[(addr & 0xffff) >> 1];
+							} else
+							{
+								printf("VDP DMA from %06x\n", addr);
+								arch_abort();
+							}
+//							uint16_t val = m68k_read_memory_16(addr);
 							if (vdp.addr & 0x01)
-								__asm__ __volatile__ ("swap.b %0, %0" : "=r" (val));
+								val = (val & 0xff) << 8 | (val >> 8);
 							((uint16_t *)vdp.vram)[vdp.addr >> 1] = val;
 							vdp.addr += vdp.regs[15];
 							addr += 2;
@@ -238,4 +300,76 @@ void vdp_interrupt(int line)
 	}
 
 	vdp.h_int_counter--;
+}
+
+
+void vdp_render_cram(void)
+{
+    uint32_t x, y, i;
+
+    for(y = 0; y < 64; y++)
+    {
+        i = y / 8;
+
+        for(x = 0; x < 64; x++)
+            ocr_vram[x] = vdp.dc_cram[(i * 8) + (x / 8)];
+
+#if 1
+{
+		uint64_t *ocr_data, *vram_data;
+		ocr_data = (uint64_t *)ocr_vram;
+		vram_data = (uint64_t *)(((uint16_t *)cram_txr) + (y * 64));
+		for (i = 0; i < 8; i++)
+			vram_data[i] = ocr_vram[i];
+}
+#else
+        sq_cpy((((uint16_t *)cram_txr) + (y * 64)), ocr_vram, 128);
+#endif
+    }
+}
+
+void vdp_render_scanline(int line)
+{
+	int row, pixrow, i, j, r;
+
+	row = line / 8;
+	pixrow = line % 8;
+	r = row * vdp.sc_width;
+
+	/* Prefill the scanline with the backdrop color. */
+	for (i = 0; i < (vdp.sc_width * 8); i++)
+		ocr_vram[i] = vdp.dc_cram[vdp.regs[7] & 0x3f];
+
+	/* Prefetch the needed name table row for use below. */
+	for (i = 0; i < ((vdp.sc_width * 2) >> 5); i++)
+		__asm__ __volatile__("pref @%0" : : "r" (&vdp.bgb[r+i*16]));
+
+	for(i = 0; i < vdp.dis_cells; i++) {
+		uint16_t name_ent = vdp.bgb[r + i];
+		uint16_t ocr_off = i * 8;
+		uint16_t pixel;
+
+		if ((name_ent & 0x8000) == 0) {
+			uint32_t data = *(uint32_t *)(vdp.vram + (name_ent << 5) + (pixrow * 4));
+			uint16_t *pal = vdp.dc_cram + (((name_ent >> 13) & 0x0003) << 4);
+
+			for (j = 0; j < 8; j++, data <<= 4) {
+				pixel = data >> 28;
+				if (pixel)
+					ocr_vram[ocr_off + j] = pal[pixel];
+			}
+		}
+	}
+
+#if 1
+{
+	uint64_t *ocr_data, *vram_data;
+	ocr_data = (uint64_t *)ocr_vram;
+	vram_data = (uint64_t *)(((uint16_t *)disp_txr) + (line * 512));
+	for (i = 0; i < ((vdp.dis_cells * 8 * 2) >> 3); i++)
+		vram_data[i] = ocr_vram[i];
+}
+#else
+	sq_cpy((((uint16_t *)disp_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
+#endif
 }

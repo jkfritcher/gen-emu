@@ -1,35 +1,95 @@
 #include <kos.h>
 
 #include "gen-emu.h"
-#include "vdp.h"
 
-// cram is stored ---bbb-ggg-rrr-
-//                edcba9876543210 
-#define PACK_RGB565(r,g,b) (((r >> 3) << 11) | ((g >> 2) << 5) | ((b >> 3) << 0))
-#define getr(cramval) (((cramval>>1) & 0x07)<<5)
-#define getg(cramval) (((cramval>>5) & 0x07)<<5)
-#define getb(cramval) (((cramval>>9) & 0x07)<<5)
 
-uint16_t cram16[64];
+/* PVR data from vdp.c */
+extern pvr_poly_hdr_t disp_hdr;
+extern pvr_ptr_t disp_txr;
+extern pvr_poly_hdr_t cram_hdr;
+extern pvr_ptr_t cram_txr;
 
-extern struct vdp_s vdp;
 
-void display_cram(void)
+void do_frame()
 {
-	uint32_t i;
-	uint32_t x,y; 
-	for(i=0;i<64;i++)
-		cram16[i] = PACK_RGB565(getr(vdp.cram[i]),
-					getg(vdp.cram[i]),
-					getb(vdp.cram[i]));
+	pvr_vertex_t vert;
+	int x, y, w, h;
 
-	for(y = 0; y < 64; y++)
-	{
-		int i = y / 8;
+	vert.argb = 0xffffffff;
+	vert.oargb = 0x00000000;
+	vert.z = 1;
 
-		for(x = 0; x < 64; x++)
-		{
-			vram_s[64000 + ((y*640) + x)] = cram16[(i * 8) + (x / 8)];
-		}		
-	}  
+	pvr_wait_ready();
+	pvr_scene_begin();
+	pvr_list_begin(PVR_LIST_OP_POLY);
+
+	/* Main display */
+	x = 25; y = 25;
+	w = 320; h = 240;
+
+	pvr_prim(&disp_hdr, sizeof(disp_hdr));
+	vert.flags = PVR_CMD_VERTEX;
+	vert.x = x;
+	vert.y = y;
+	vert.u = vert.v = 0.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.x = x + w;
+	vert.u = 320.0f/512.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.y = y + h;
+	vert.v = 240.0f/256.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.x = x;
+	vert.y = y;
+	vert.u = vert.v = 0.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.y = y + h;
+	vert.v = 240.0f/256.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.flags = PVR_CMD_VERTEX_EOL;
+	vert.x = x + w;
+	vert.u = 320.0f/512.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+
+	/* CRAM display */
+	x = 550; y = 50;
+	w = 64; h = 64;
+
+	pvr_prim(&cram_hdr, sizeof(cram_hdr));
+	vert.flags = PVR_CMD_VERTEX;
+	vert.x = x;
+	vert.y = y;
+	vert.u = vert.v = 0.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.x = x + w;
+	vert.u = 1.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.y = y + h;
+	vert.v = 1.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.x = x;
+	vert.y = y;
+	vert.u = vert.v = 0.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.y = y + h;
+	vert.v = 1.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.flags = PVR_CMD_VERTEX_EOL;
+	vert.x = x + w;
+	vert.u = 1.0f;
+	pvr_prim(&vert, sizeof(vert));
+
+	pvr_list_finish();
+	pvr_scene_finish();
 }
