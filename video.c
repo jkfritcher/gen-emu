@@ -24,8 +24,13 @@ void do_frame()
 	pvr_list_begin(PVR_LIST_OP_POLY);
 
 	/* Main display */
+#if 1
 	x = 25; y = 25;
 	w = 320; h = 240;
+#else
+	x = 0; y = 0;
+	w = 640; h = 480;
+#endif
 
 	pvr_prim(&disp_hdr, sizeof(disp_hdr));
 	vert.flags = PVR_CMD_VERTEX;
