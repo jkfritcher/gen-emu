@@ -1,7 +1,7 @@
 # $Id$
 
 TARGET = gen-emu.elf
-OBJS = main.o loader.o memory.o misc.o md5c.o m68k/m68k.o mz80/mz80.o
+OBJS = main.o loader.o m68k.o z80.o vdp.o misc.o md5c.o m68k/m68k.o z80/z80.o
 
 all: $(TARGET)
 
@@ -11,12 +11,12 @@ $(TARGET): $(OBJS)
 m68k/m68k.o:
 	@$(MAKE) -C m68k
 
-mz80/mz80.o:
-	@$(MAKE) -C mz80
+z80/z80.o:
+	@$(MAKE) -C z80
 
 clean:
 	rm -f gen-emu.elf $(OBJS)
 	@$(MAKE) -C m68k clean
-	@$(MAKE) -C mz80 clean
+	@$(MAKE) -C z80 clean
 
 include Makefile.kos
