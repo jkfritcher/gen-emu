@@ -330,20 +330,22 @@ void vdp_render_cram(void)
 void vdp_render_plane(int line, int plane, int priority)
 {
 	int row, pixrow, i, j;
+	uint16_t *p;
 
+	p = plane ? vdp.bgb : vdp.bga;
 	row = (line / 8) * vdp.sc_width;
 	pixrow = line % 8;
 
 	/* Prefetch the needed name table row for use below. */
 	for (i = 0; i < ((vdp.sc_width * 2) >> 5); i++)
-		__asm__ volatile ("pref @%0" : : "r" (&vdp.bgb[row+i*16]));
+		__asm__ volatile ("pref @%0" : : "r" (&p[row+i*16]));
 
 	for(i = 0; i < vdp.dis_cells; i++) {
-		uint16_t name_ent = vdp.bgb[row + i];
+		uint16_t name_ent = p[row + i];
 		uint16_t ocr_off = i * 8;
 		uint8_t pixel;
 
-		if ((name_ent & 0x8000) == 0) {
+		if ((name_ent & 0x8000) == priority) {
 			uint16_t *pal = vdp.dc_cram + (((name_ent >> 13) & 0x0003) << 4);
 			uint32_t data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (pixrow * 4));
 
@@ -367,6 +369,7 @@ void vdp_render_scanline(int line)
 		ocr_vram[i] = vdp.dc_cram[vdp.regs[7] & 0x3f];
 
 	vdp_render_plane(line, 1, 0);
+	vdp_render_plane(line, 0, 0);
 
 	sq_cpy((((uint16_t *)disp_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
 }
