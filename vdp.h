@@ -27,10 +27,12 @@ struct vdp_s
 	uint32_t control;
 
 	uint16_t status;
+	uint16_t scanline;
 	uint16_t hv;
 
 	uint16_t addr;
 	uint8_t code;
+	uint8_t h_int_counter;
 	uint8_t write_pending;
 };
 
@@ -66,5 +68,6 @@ uint16_t vdp_control_read(void);
 uint16_t vdp_data_read(void);
 void vdp_control_write(uint16_t);
 void vdp_data_write(uint16_t);
+void vdp_interrupt(int line);
 
 #endif // __gen_vdp_h

@@ -5,6 +5,7 @@
 #include "gen-emu.h"
 #include "vdp.h"
 #include "m68k.h"
+#include "z80.h"
 
 
 struct vdp_s vdp;
@@ -12,11 +13,17 @@ struct vdp_s vdp;
 
 uint16_t vdp_control_read(void)
 {
+	uint16_t ret = 0x3500;
+
 	vdp.write_pending = 0;
+	m68k_set_irq(0);
 
-	printf("VDP C -> %04x\n", vdp.status);
 
-	return (vdp.status);
+	ret |= (vdp.status & 0x00ff);
+
+	printf("VDP C -> %04x\n", ret);
+
+	return ret;
 }
 
 void vdp_control_write(uint16_t val)
@@ -155,4 +162,44 @@ void vdp_data_write(uint16_t val)
 			}
 		}
 	}
+}
+
+void vdp_interrupt(int line)
+{
+	uint8_t h_int_pending = 0;
+
+	if (vdp.h_int_counter == 0) {
+		vdp.h_int_counter = vdp.regs[10];
+		if (vdp.regs[0] & 0x10)
+			h_int_pending = 1;
+	}
+
+	if (line < 224) {
+		if (line == 0) {
+			vdp.h_int_counter = vdp.regs[10];
+			vdp.status &= 0x0001;
+		}
+
+		if (h_int_pending) {
+			m68k_set_irq(4);
+			printf("68k h-int triggered.\n");
+		}
+	} else
+	if (line == 224) {
+		z80_set_irq_line(0, PULSE_LINE);
+		if (h_int_pending) {
+			m68k_set_irq(4);
+			printf("68k h-int triggered.\n");
+		} else {
+			if (vdp.regs[1] & 0x20) {
+				vdp.status |= 0x0080;
+				m68k_set_irq(6);
+				printf("68k v-int triggered.\n");
+			}
+		}
+	} else {
+		vdp.h_int_counter = vdp.regs[10];
+	}
+
+	vdp.h_int_counter--;
 }
