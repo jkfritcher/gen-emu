@@ -14,11 +14,15 @@ uint16_t vdp_control_read(void)
 {
 	vdp.write_pending = 0;
 
+	printf("VDP C -> %04x\n", vdp.status);
+
 	return (vdp.status);
 }
 
 void vdp_control_write(uint16_t val)
 {
+	printf("VDP C <- %04x\n", val);
+
 	if((val & 0xc000) == 0x8000) {
 		if(!vdp.write_pending) {
 			vdp.regs[(val & 0x1f00) >> 8] = (val & 0xff);
@@ -55,12 +59,16 @@ uint16_t vdp_data_read(void)
 		break;
 	}
 
+	printf("VDP D -> %04x\n", ret);
+
 	return ret;
 }
 
 void vdp_data_write(uint16_t val)
 {
 	vdp.write_pending = 0;
+
+	printf("VDP D <- %04x\n", val);
 
 	switch(vdp.code) {
 	case 0x01:
