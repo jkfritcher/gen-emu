@@ -7,7 +7,7 @@
 
 static uint8_t outputs[3];
 static uint8_t outputs_mask[3];
-static maple_device_t *caddr[2];
+static maple_device_t *caddr[3];
 
 
 void ctlr_init(void)
