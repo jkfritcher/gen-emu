@@ -96,10 +96,6 @@ void vdp_control_write(uint16_t val)
 			case 0x05:	/* SAT */
 				vdp.sat = (uint64_t *)(vdp.vram + ((val & 0x7f) << 9));
 				break;
-			case 0x07:
-				break;
-			case 0x0b:
-				break;
 			case 0x0c:	/* Mode Set #4 */
 				vdp.dis_cells = mode_cells[((vdp.regs[12] & 0x01) << 1) |
 											(vdp.regs[12] >> 7)];
@@ -346,10 +342,9 @@ void vdp_render_plane(int line, int plane, int priority)
 {
 	int row, pixrow, i, j;
 	sint16_t hscroll = 0;
+	sint8_t  col_off, pix_off, pix_tmp;
 	uint16_t *p;
-	uint8_t  *tmp_line, col_off, pix_off;
 
-	tmp_line = (uint8_t *)0x7c002280;
 	p = plane ? vdp.bgb : vdp.bga;
 
 	switch(vdp.regs[11] & 0x03) {
@@ -370,6 +365,7 @@ void vdp_render_plane(int line, int plane, int priority)
 	hscroll = (0x400 - hscroll) & 0x3ff;
 	col_off = hscroll >> 3;
 	pix_off = hscroll & 0x7;
+	pix_tmp = pix_off;
 
 	if ((vdp.regs[11] & 0x40) == 0)
 		line = (line + (vdp.vsram[(plane ? 1 : 0)] & 0x3ff)) % (vdp.sc_height << 3);
@@ -378,13 +374,12 @@ void vdp_render_plane(int line, int plane, int priority)
 	pixrow = line % 8;
 
 	i = 0;
-	while(i < (vdp.dis_cells * 8)) {
-		uint16_t name_ent = p[row + ((col_off + (i >> 3)) % vdp.sc_width)];
-		uint8_t pixel;
+	while (i < (vdp.dis_cells * 8)) {
+		uint16_t name_ent = p[row + ((col_off + ((pix_off + i) >> 3)) % vdp.sc_width)];
 
 		if ((name_ent >> 15) == priority) {
 			uint32_t data;
-			uint32_t pal;
+			sint32_t pal, pixel;
 
 			pal = (name_ent >> 9) & 0x30;
 
@@ -398,8 +393,8 @@ void vdp_render_plane(int line, int plane, int priority)
 				for (j = 0; j < 8; j++) {
 					pixel = data & 0x0f;
 					data >>= 4;
-					if (pix_off > 0) {
-						pix_off--;
+					if (pix_tmp > 0) {
+						pix_tmp--;
 						continue;
 					}
 					if (pixel)
@@ -410,14 +405,21 @@ void vdp_render_plane(int line, int plane, int priority)
 				for (j = 0; j < 8; j++) {
 					pixel = data >> 28;
 					data <<= 4;
-					if (pix_off > 0) {
-						pix_off--;
+					if (pix_tmp > 0) {
+						pix_tmp--;
 						continue;
 					}
 					if (pixel)
 						ocr_vram[i] = vdp.dc_cram[pal | pixel];
 					i++;
 				}
+			}
+		} else {
+			if (pix_tmp > 0) {
+				i += (8 - pix_tmp);
+				pix_tmp = 0;
+			} else {
+				i += 8;
 			}
 		}
 	}
@@ -434,8 +436,10 @@ void vdp_render_scanline(int line)
 	if (vdp.regs[1] & 0x40) {
 		vdp_render_plane(line, 1, 0);
 		vdp_render_plane(line, 0, 0);
+//		vdp_render_sprites(line, 0);
 		vdp_render_plane(line, 1, 1);
 		vdp_render_plane(line, 0, 1);
+//		vdp_render_sprites(line, 1);
 	}
 
 	sq_cpy((((uint16_t *)display_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
