@@ -103,39 +103,43 @@ void vdp_control_write(uint16_t val)
 				/* dma operation */
 				if (((vdp.code & 0x30) == 0x20) && !(vdp.regs[23] & 0x80)) {
 					uint16_t len = (vdp.regs[20] << 8) |  vdp.regs[19];
-					uint32_t addr = ((vdp.regs[23] << 16) |
-									(vdp.regs[22] << 8) |
-									 vdp.regs[21]) << 1;
+					uint16_t src_off = (vdp.regs[22] << 8) | vdp.regs[21];
+					uint16_t *src_mem, src_mask;
+
+					if ((vdp.regs[23] & 0x70) == 0x70) {
+						src_mem = m68k_ram16;
+						src_mask = 0x7fff;
+					} else
+					if ((vdp.regs[23] & 0x70) < 0x20) {
+						src_mem = (uint16_t *)(cart.rom + (vdp.regs[23] << 17));
+						src_mask = 0xffff;
+					} else {
+						printf("DMA from an unknown block... 0x%02x\n", (vdp.regs[23] << 1));
+						arch_abort();
+					}
 
 					/* 68k -> vdp */
 					switch(vdp.code & 0x07) {
 					case 0x01:
 						/* vram */
 						do {
-							if (addr < 0x400000) {
-								val = ((uint16_t *)cart.rom)[addr >> 1];
-							} else
-							if (addr > 0xe00000) {
-								val = m68k_ram16[(addr & 0xffff) >> 1];
-							} else
-							{
-								printf("VDP DMA from %06x\n", addr);
-								arch_abort();
-							}
-//							uint16_t val = m68k_read_memory_16(addr);
+							val = src_mem[src_off & src_mask];
+							SWAPBYTES(val);
 							if (vdp.addr & 0x01)
-								val = (val & 0xff) << 8 | (val >> 8);
+								SWAPBYTES(val);
 							((uint16_t *)vdp.vram)[vdp.addr >> 1] = val;
 							vdp.addr += vdp.regs[15];
-							addr += 2;
+							src_off += 1;
 						} while(--len);
 						break;
 					case 0x03:
 						/* cram */
 						do {
-							vdp.cram[vdp.addr >> 1] = m68k_read_memory_16(addr);
+							val = src_mem[src_off & src_mask];
+							SWAPBYTES(val);
+							vdp.cram[vdp.addr >> 1] = val;
 							vdp.addr += vdp.regs[15];
-							addr += 2;
+							src_off += 1;
 
 							if(vdp.addr > 0x7f)
 								break;
@@ -149,9 +153,11 @@ void vdp_control_write(uint16_t val)
 					case 0x05:
 						/* vsram */
 						do {
-							vdp.vsram[vdp.addr >> 1] = m68k_read_memory_16(addr);
+							val = src_mem[src_off & src_mask];
+							SWAPBYTES(val);
+							vdp.vsram[vdp.addr >> 1] = val;
 							vdp.addr += vdp.regs[15];
-							addr += 2;
+							src_off += 1;
 
 							if(vdp.addr > 0x7f)
 								break;
@@ -160,6 +166,10 @@ void vdp_control_write(uint16_t val)
 					default:
 						printf("68K->VDP DMA Error, code %d.", vdp.code);
 					}
+
+					vdp.regs[19] = vdp.regs[20] = 0;
+					vdp.regs[21] = src_off & 0xff;
+					vdp.regs[22] = src_off >> 8;
 				}
 			}
 		}
@@ -307,69 +317,56 @@ void vdp_render_cram(void)
 {
     uint32_t x, y, i;
 
-    for(y = 0; y < 64; y++)
-    {
+    for(y = 0; y < 64; y++) {
         i = y / 8;
 
         for(x = 0; x < 64; x++)
             ocr_vram[x] = vdp.dc_cram[(i * 8) + (x / 8)];
 
-#if 1
-{
-		uint64_t *ocr_data, *vram_data;
-		ocr_data = (uint64_t *)ocr_vram;
-		vram_data = (uint64_t *)(((uint16_t *)cram_txr) + (y * 64));
-		for (i = 0; i < 8; i++)
-			vram_data[i] = ocr_vram[i];
-}
-#else
         sq_cpy((((uint16_t *)cram_txr) + (y * 64)), ocr_vram, 128);
-#endif
     }
 }
 
-void vdp_render_scanline(int line)
+void vdp_render_plane(int line, int plane, int priority)
 {
-	int row, pixrow, i, j, r;
+	int row, pixrow, i, j;
 
-	row = line / 8;
+	row = (line / 8) * vdp.sc_width;
 	pixrow = line % 8;
-	r = row * vdp.sc_width;
-
-	/* Prefill the scanline with the backdrop color. */
-	for (i = 0; i < (vdp.sc_width * 8); i++)
-		ocr_vram[i] = vdp.dc_cram[vdp.regs[7] & 0x3f];
 
 	/* Prefetch the needed name table row for use below. */
 	for (i = 0; i < ((vdp.sc_width * 2) >> 5); i++)
-		__asm__ __volatile__("pref @%0" : : "r" (&vdp.bgb[r+i*16]));
+		__asm__ volatile ("pref @%0" : : "r" (&vdp.bgb[row+i*16]));
 
 	for(i = 0; i < vdp.dis_cells; i++) {
-		uint16_t name_ent = vdp.bgb[r + i];
+		uint16_t name_ent = vdp.bgb[row + i];
 		uint16_t ocr_off = i * 8;
-		uint16_t pixel;
+		uint8_t pixel;
 
 		if ((name_ent & 0x8000) == 0) {
-			uint32_t data = *(uint32_t *)(vdp.vram + (name_ent << 5) + (pixrow * 4));
 			uint16_t *pal = vdp.dc_cram + (((name_ent >> 13) & 0x0003) << 4);
+			uint32_t data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (pixrow * 4));
 
-			for (j = 0; j < 8; j++, data <<= 4) {
+			for (j = 0; j < 8; j++) {
 				pixel = data >> 28;
+				data <<= 4;
+
 				if (pixel)
 					ocr_vram[ocr_off + j] = pal[pixel];
 			}
 		}
 	}
-
-#if 1
-{
-	uint64_t *ocr_data, *vram_data;
-	ocr_data = (uint64_t *)ocr_vram;
-	vram_data = (uint64_t *)(((uint16_t *)disp_txr) + (line * 512));
-	for (i = 0; i < ((vdp.dis_cells * 8 * 2) >> 3); i++)
-		vram_data[i] = ocr_vram[i];
 }
-#else
+
+void vdp_render_scanline(int line)
+{
+	int i;
+
+	/* Prefill the scanline with the backdrop color. */
+	for (i = 0; i < (vdp.sc_width * 8); i++)
+		ocr_vram[i] = vdp.dc_cram[vdp.regs[7] & 0x3f];
+
+	vdp_render_plane(line, 1, 0);
+
 	sq_cpy((((uint16_t *)disp_txr) + (line * 512)), ocr_vram, (vdp.dis_cells * 8 * 2));
-#endif
 }
