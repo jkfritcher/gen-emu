@@ -7,11 +7,11 @@
 
 struct vdp_s
 {
-	uint8_t regs[32];		/* Only first 23 used, rest are address padding. */
 	uint8_t vram[65536];
 	uint16_t cram[64];
 	uint16_t vsram[64];		/* Only first 40 used. rest are address padding. */
 	uint16_t dc_cram[64];	/* cram in dc format */
+	uint8_t regs[32];		/* Only first 24 used, rest are address padding. */
 
 	uint32_t control;
 	uint16_t *bga;
