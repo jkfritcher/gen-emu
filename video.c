@@ -24,36 +24,30 @@ void do_frame()
 	pvr_list_begin(PVR_LIST_OP_POLY);
 
 	/* Main display */
-	x = 25; y = 25;
-	w = 320; h = 240;
+	x = 0; y = 0;
+	w = 640; h = 480;
 
 	pvr_prim(&disp_hdr, sizeof(disp_hdr));
 	vert.flags = PVR_CMD_VERTEX;
 	vert.x = x;
-	vert.y = y;
-	vert.u = vert.v = 0.0f;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.x = x + w;
-	vert.u = 320.0f/512.0f;
-	pvr_prim(&vert, sizeof(vert));
-
 	vert.y = y + h;
+	vert.u = 0.0f;
 	vert.v = 240.0f/256.0f;
 	pvr_prim(&vert, sizeof(vert));
 
-	vert.x = x;
 	vert.y = y;
-	vert.u = vert.v = 0.0f;
+	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
 
+	vert.x = x + w;
 	vert.y = y + h;
+	vert.u = 320.0f/512.0f;
 	vert.v = 240.0f/256.0f;
 	pvr_prim(&vert, sizeof(vert));
 
 	vert.flags = PVR_CMD_VERTEX_EOL;
-	vert.x = x + w;
-	vert.u = 320.0f/512.0f;
+	vert.y = y;
+	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
 
 
@@ -64,30 +58,24 @@ void do_frame()
 	pvr_prim(&cram_hdr, sizeof(cram_hdr));
 	vert.flags = PVR_CMD_VERTEX;
 	vert.x = x;
-	vert.y = y;
-	vert.u = vert.v = 0.0f;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.x = x + w;
-	vert.u = 1.0f;
-	pvr_prim(&vert, sizeof(vert));
-
 	vert.y = y + h;
+	vert.u = 0.0f;
 	vert.v = 1.0f;
 	pvr_prim(&vert, sizeof(vert));
 
-	vert.x = x;
 	vert.y = y;
-	vert.u = vert.v = 0.0f;
+	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
 
+	vert.x = x + w;
 	vert.y = y + h;
+	vert.u = 1.0f;
 	vert.v = 1.0f;
 	pvr_prim(&vert, sizeof(vert));
 
 	vert.flags = PVR_CMD_VERTEX_EOL;
-	vert.x = x + w;
-	vert.u = 1.0f;
+	vert.y = y;
+	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
 
 	pvr_list_finish();
