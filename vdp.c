@@ -367,7 +367,7 @@ void vdp_render_plane(int line, int plane, int priority)
 	pix_off = hscroll & 0x7;
 	pix_tmp = pix_off;
 
-	if ((vdp.regs[11] & 0x40) == 0)
+	if ((vdp.regs[11] & 0x04) == 0)
 		line = (line + (vdp.vsram[(plane ? 1 : 0)] & 0x3ff)) % (vdp.sc_height << 3);
 
 	row = (line / 8) * vdp.sc_width;
@@ -437,8 +437,8 @@ void vdp_render_scanline(int line)
 		vdp_render_plane(line, 1, 0);
 		vdp_render_plane(line, 0, 0);
 //		vdp_render_sprites(line, 0);
-		vdp_render_plane(line, 1, 1);
-		vdp_render_plane(line, 0, 1);
+//		vdp_render_plane(line, 1, 1);
+//		vdp_render_plane(line, 0, 1);
 //		vdp_render_sprites(line, 1);
 	}
 
