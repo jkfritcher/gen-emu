@@ -4,11 +4,12 @@
 
 
 /* PVR data from vdp.c */
-extern pvr_poly_hdr_t disp_hdr;
-extern pvr_ptr_t disp_txr;
+extern pvr_poly_hdr_t disp_hdr[2];
+extern pvr_ptr_t disp_txr[2];
+extern pvr_ptr_t display_txr;
 extern pvr_poly_hdr_t cram_hdr;
 extern pvr_ptr_t cram_txr;
-
+extern uint8_t display_ptr;
 
 void do_frame()
 {
@@ -20,11 +21,15 @@ void do_frame()
 	vert.z = 1;
 
 	pvr_wait_ready();
+
+	display_txr = disp_txr[display_ptr];
+	display_ptr = (display_ptr ? 0 : 1);
+
 	pvr_scene_begin();
 	pvr_list_begin(PVR_LIST_OP_POLY);
 
 	/* Main display */
-#if 1
+#if 0
 	x = 25; y = 25;
 	w = 320; h = 240;
 #else
@@ -32,7 +37,7 @@ void do_frame()
 	w = 640; h = 480;
 #endif
 
-	pvr_prim(&disp_hdr, sizeof(disp_hdr));
+	pvr_prim(&disp_hdr[display_ptr], sizeof(pvr_poly_hdr_t));
 	vert.flags = PVR_CMD_VERTEX;
 	vert.x = x;
 	vert.y = y + h;
@@ -55,7 +60,7 @@ void do_frame()
 	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
 
-
+#if 0
 	/* CRAM display */
 	x = 550; y = 25;
 	w = 64; h = 64;
@@ -82,6 +87,7 @@ void do_frame()
 	vert.y = y;
 	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
+#endif
 
 	pvr_list_finish();
 	pvr_scene_finish();
