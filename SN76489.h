@@ -36,6 +36,8 @@ typedef struct
   uint32_t First;                   /* First used Sound() channel */
 } SN76489;
 
+extern SN76489 PSG;
+
 /** Reset76489() *********************************************/
 /** Reset the sound chip and use sound channels from the    **/
 /** one given in First.                                     **/
