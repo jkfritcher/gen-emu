@@ -7,7 +7,6 @@
 #include "SN76489.h"
 #include "input.h"
 
-
 //KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS | INIT_GDB);
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS);
 
@@ -24,6 +23,7 @@ uint32_t rom_load(char *name);
 void rom_free(void);
 void run_one_field(void);
 
+extern SN76489 PSG; 
 
 int main(int argc, char *argv[])
 {
@@ -43,8 +43,6 @@ int main(int argc, char *argv[])
 	m68k_pulse_reset();
 
         Reset76489(&PSG,0);
-// calling this in synchronous mode means we can output sound whenever
-// we please (building up a buffer) instead of every write
         Sync76489(&PSG,SN76489_SYNC); 	
 
 	ctlr_init();
