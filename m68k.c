@@ -8,6 +8,8 @@
 #include "m68k.h"
 #include "z80.h"
 
+#include "SN76489.h"
+
 #include "vdp.h"
 #include "input.h"
 
@@ -335,8 +337,8 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 			case 0x13:
 			case 0x15:
 			case 0x17:
-//				psg_write(val);
-				break;
+				Write76489(&PSG,val);
+			break;
 			}
 		}
 	} else
@@ -432,7 +434,7 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 			case 0x12:
 			case 0x14:
 			case 0x16:
-//				psg_write(val & 0xff);
+				Write76489(&PSG,val&0xff);
 				break;
 			}
 		}

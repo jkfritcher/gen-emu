@@ -1,10 +1,10 @@
-
 #include <kos.h>
 
 #include "gen-emu.h"
 
 #include "m68k.h"
 #include "z80.h"
+#include "SN76489.h"
 #include "input.h"
 
 
@@ -41,7 +41,14 @@ int main(int argc, char *argv[])
 
 	z80_init();
 	m68k_pulse_reset();
+
+        Reset76489(&PSG,0);
+// calling this in synchronous mode means we can output sound whenever
+// we please (building up a buffer) instead of every write
+        Sync76489(&PSG,SN76489_SYNC); 	
+
 	ctlr_init();
+
 
 	do {
 		run_one_field();
@@ -76,7 +83,10 @@ void run_one_field(void)
 
 		/* render scanline */
 	}
-	/* sound stuff */
+
+	/* sound stuff, call once per frame */
+	Sync76489(&PSG,SN76489_FLUSH);
+
 	/* input processing */
 	cnt++;
 	if ((cnt % 60) == 0)
