@@ -23,6 +23,7 @@ struct vdp_s
 	uint16_t scanline;
 	uint16_t hv;
 
+	uint16_t hs_off;
 	uint16_t addr;
 	uint8_t code;
 	uint8_t h_int_counter;
