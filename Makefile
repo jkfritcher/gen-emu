@@ -1,7 +1,7 @@
 # $Id$
 
 TARGET = gen-emu.elf
-OBJS = main.o loader.o memory.o md5c.o m68k/m68k.o mz80/mz80.o
+OBJS = main.o loader.o memory.o misc.o md5c.o m68k/m68k.o mz80/mz80.o
 
 all: $(TARGET)
 
