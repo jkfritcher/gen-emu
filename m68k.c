@@ -8,6 +8,8 @@
 #include "m68k.h"
 #include "z80.h"
 
+#include "vdp.h"
+
 
 uint8_t m68k_ram[65536];
 uint16_t *m68k_ram16 = (uint16_t *)m68k_ram;
@@ -36,19 +38,19 @@ uint32_t m68k_read_memory_8(uint32_t addr)
 			switch(addr & 0x1f) {
 			case 0x00:
 			case 0x02:
-//				ret = (vdp_data_read() >> 8);
+				ret = (vdp_data_read() >> 8);
 				break;
 			case 0x01:
 			case 0x03:
-//				ret = (vdp_data_read() & 0xff);
+				ret = (vdp_data_read() & 0xff);
 				break;
 			case 0x04:
 			case 0x06:
-//				ret = (vdp_control_read() >> 8);
+				ret = (vdp_control_read() >> 8);
 				break;
 			case 0x05:
 			case 0x07:
-//				ret = (vdp_control_read() & 0xff);
+				ret = (vdp_control_read() & 0xff);
 				break;
 			case 0x08:
 			case 0x0a:
@@ -67,7 +69,7 @@ uint32_t m68k_read_memory_8(uint32_t addr)
 	} else
 	if ((addr >= 0xa00000) && (addr <= 0xa0ffff)) {
 		if (z80_running && z80_busreq)
-			ret = mz80_read_memory(addr & 0x7fff, NULL);
+			ret = z80_read_mem(addr & 0x7fff);
 	} else
 	if ((addr >= 0xa10000) && (addr <= 0xa1001f)) {
 		/* Controller I/O addresses. */
@@ -158,7 +160,7 @@ uint32_t m68k_read_memory_8(uint32_t addr)
 		quit = 1;
 	}
 
-	printf("M68K  %06x -> %02x\n", addr, ret);
+//	printf("M68K  %06x -> %02x\n", addr, ret);
 
 	return(ret);
 }
@@ -187,11 +189,11 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 			switch(addr & 0x1f) {
 			case 0x00:
 			case 0x02:
-//				ret = vdp_data_read();
+				ret = vdp_data_read();
 				break;
 			case 0x04:
 			case 0x06:
-//				ret = vdp_control_read();
+				ret = vdp_control_read();
 				break;
 			case 0x08:
 			case 0x0a:
@@ -204,7 +206,7 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 	} else
 	if ((addr >= 0xa00000) && (addr <= 0xa0ffff)) {
 		if (z80_running && z80_busreq) {
-			ret = mz80_read_memory(addr & 0x7fff, NULL);
+			ret = z80_read_mem(addr & 0x7fff);
 			ret |= ret << 8;
 		}
 	} else
@@ -281,7 +283,7 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 		quit = 1;
 	}
 
-	printf("M68K  %06x -> %04x\n", addr, ret);
+//	printf("M68K  %06x -> %04x\n", addr, ret);
 
 	return(ret);
 }
@@ -301,7 +303,7 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 	addr &= 0xffffff;
 	val &= 0xff;
 
-	printf("M68K  %06x <- %02x\n", addr, val);
+//	printf("M68K  %06x <- %02x\n", addr, val);
 
 	if (addr >= 0xe00000) {
 		m68k_ram[addr & 0xffff] = val;
@@ -314,13 +316,13 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 			case 0x01:
 			case 0x02:
 			case 0x03:
-//				vdp_data_write((val << 8) | val);
+				vdp_data_write((val << 8) | val);
 				break;
 			case 0x04:
 			case 0x05:
 			case 0x06:
 			case 0x07:
-//				vdp_control_write((val << 8) | val);
+				vdp_control_write((val << 8) | val);
 				break;
 			case 0x11:
 			case 0x13:
@@ -333,7 +335,10 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 	} else
 	if ((addr >= 0xa00000) && (addr <= 0xa0ffff)) {
 		if (z80_running && z80_busreq)
-			mz80_write_memory(addr & 0x7fff, val & 0xff, NULL);
+			z80_write_mem(addr & 0x7fff, val & 0xff);
+	} else
+	if ((addr >= 0xa10000) && (addr <= 0xa1001f)) {
+		/* I/O write */
 	} else
 	switch(addr) {
 	case 0xa11100:
@@ -342,7 +347,9 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 	case 0xa11200:
 		z80_running = val & 0x01;
 		if (z80_running) {
-			mz80reset();
+			if (!z80_busreq)
+//				z80_dump_mem();
+			z80_reset(NULL);
 			/* XXX reset ym2612 */
 		}
 		break;
@@ -368,7 +375,7 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 	addr &= 0xffffff;
 	val &= 0xffff;
 
-	printf("M68K  %06x <- %04x\n", addr, val);
+//	printf("M68K  %06x <- %04x\n", addr, val);
 
 	if (addr >= 0xe00000) {
 //		SWAPBYTES(val);
@@ -381,11 +388,11 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 			switch(addr & 0x1f) {
 			case 0x00:
 			case 0x02:
-//				vdp_data_write(val);
+				vdp_data_write(val);
 				break;
 			case 0x04:
 			case 0x06:
-//				vdp_control_write(val);
+				vdp_control_write(val);
 				break;
 			case 0x10:
 			case 0x12:
@@ -398,7 +405,10 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 	} else
 	if ((addr >= 0xa00000) && (addr <= 0xa0ffff)) {
 		if (z80_running && z80_busreq)
-			mz80_write_memory(addr & 0x7fff, (val >> 8) , NULL);
+			z80_write_mem(addr & 0x7fff, (val >> 8));
+	} else
+	if ((addr >= 0xa10000) && (addr <= 0xa1001f)) {
+		/* I/O write */
 	} else
 	switch(addr) {
 	case 0xa11100:
@@ -407,7 +417,9 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 	case 0xa11200:
 		z80_running = (val >> 8) & 0x01;
 		if (z80_running) {
-			mz80reset();
+			if (!z80_busreq)
+//				z80_dump_mem();
+			z80_reset(NULL);
 			/* XXX reset ym2612 */
 		}
 		break;

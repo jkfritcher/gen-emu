@@ -9,52 +9,55 @@
 #include "m68k.h"
 
 
-UINT8 mz80_read_memory(UINT32 addr, struct MemoryReadByte *mrb);
-void mz80_write_memory(UINT32 addr, UINT8 val, struct MemoryWriteByte *mwr);
+UINT8 z80_read_port(UINT32 addr);
+void z80_write_port(UINT32 addr, UINT8 val);
+UINT8 z80_read_mem(UINT32 addr);
+void z80_write_mem(UINT32 addr, UINT8 val);
 
-static struct z80PortRead ReadPorts[] = { { 0xffff, 0xffff, NULL } };
-static struct z80PortWrite WritePorts[] = { { 0xffff, 0xffff, NULL } };
-static struct MemoryReadByte ReadMemory[] = {
-	{ 0x0000, 0xffff, mz80_read_memory },
-	{ 0xffffffff, 0xffffffff, NULL }
-};
-static struct MemoryWriteByte WriteMemory[] = {
-	{ 0x0000, 0xffff, mz80_write_memory },
-	{ 0xffffffff, 0xffffffff -1, NULL }
-};
-
-uint8_t mz80_ram[8192];
+uint8_t z80_ram[0x2000];	/* 8KB */
 
 uint32_t z80_bank_base;
 uint8_t z80_bank_shift;
 uint8_t z80_running;
 uint8_t z80_busreq;
 
-static struct mz80context z80cpu;
 
-
-uint32_t z80_init(void)
+void z80_dump_mem(void)
 {
-	z80cpu.z80Base = mz80_ram;
-	z80cpu.z80MemRead = ReadMemory;
-	z80cpu.z80MemWrite = WriteMemory;
-	z80cpu.z80IoRead = ReadPorts;
-	z80cpu.z80IoWrite = WritePorts;
+	int fd;
+	fd = fs_open("/pc/home/jkf/src/dc/gen-emu/z80ram.bin", O_WRONLY | O_TRUNC);
+	fs_write(fd, z80_ram, 8192);
+	fs_close(fd);
+    fd = fs_open("/pc/home/jkf/src/dc/gen-emu/dcvram.bin", O_WRONLY | O_TRUNC);
+    fs_write(fd, (char *)0x85000000, 8*1024*1024);
+    fs_close(fd);
+}
 
-	mz80SetContext(&z80cpu);
+uint32_t z80init(void)
+{
+	z80_init();
 
-	mz80reset();
+	z80_reset(NULL);
 
 	return 0;
 }
 
-UINT8 mz80_read_memory(UINT32 addr, struct MemoryReadByte *mrb)
+UINT8 z80_read_port(UINT32 addr)
+{
+	return 0xff;
+}
+
+void z80_write_port(UINT32 addr, UINT8 val)
+{
+}
+
+UINT8 z80_read_mem(UINT32 addr)
 {
 	UINT8 ret = 0xff;
 	addr &= 0xffff;
 
 	if (addr < 0x4000) {
-		ret = mz80_ram[addr & 0x1fff];
+		ret = z80_ram[addr & 0x1fff];
 	} else
 	if (addr >= 0x8000) {
 		ret = m68k_read_memory_8(addr & 0x7fff);
@@ -63,19 +66,24 @@ UINT8 mz80_read_memory(UINT32 addr, struct MemoryReadByte *mrb)
 		/* vdp */
 	}
 
-	printf("MZ80  %04lx -> %02x\n", addr, ret);
+//	printf("Z80   %04x -> %02x\n", addr, ret);
 
 	return(ret);
 }
 
-void mz80_write_memory(UINT32 addr, UINT8 val, struct MemoryWriteByte *mwr)
+void z80_write_mem(UINT32 addr, UINT8 val)
 {
 	addr &= 0xffff;
 
-	printf("MZ80  %04lx <- %02x\n", addr, val);
+//	if ((addr == 0) && (val == 2)) {
+//		z80_dump_mem();
+//		asm("trapa #0x20");
+//	}
+
+//	printf("Z80   %04x <- %02x\n", addr, val);
 
 	if (addr < 0x4000) {
-		mz80_ram[addr & 0x1fff] = val;
+		z80_ram[addr & 0x1fff] = val;
 	} else
 	if (addr >= 0x8000) {
 		m68k_write_memory_8(addr & 0x7fff, val);
