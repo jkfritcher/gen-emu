@@ -31,7 +31,13 @@ void vdp_init(void)
 	disp_txr = pvr_mem_malloc(512 * 256 * 2);
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY,
 		PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED,
+#if 1
 		512, 256, disp_txr, PVR_FILTER_NONE);
+#else
+		512, 256, disp_txr,
+		(vid_check_cable() ? PVR_FILTER_NONE : PVR_FILTER_BILINEAR));
+#endif
+
 	pvr_poly_compile(&disp_hdr, &cxt);
 
 	/* Allocate and build cram texture data */
@@ -345,16 +351,53 @@ void vdp_render_plane(int line, int plane, int priority)
 		uint16_t ocr_off = i * 8;
 		uint8_t pixel;
 
-		if ((name_ent & 0x8000) == priority) {
-			uint16_t *pal = vdp.dc_cram + (((name_ent >> 13) & 0x0003) << 4);
-			uint32_t data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (pixrow * 4));
+		if ((name_ent >> 15) == priority) {
+			uint16_t *pal = vdp.dc_cram + (((name_ent >> 13) & 0x3) << 4);
+			uint32_t data;
 
-			for (j = 0; j < 8; j++) {
-				pixel = data >> 28;
-				data <<= 4;
+			if ((name_ent >> 12) & 0x1) {
+				data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (28 - (pixrow * 4)));
+				__asm__ volatile ("swap.w %0, %0" : "+r" (data));
 
-				if (pixel)
-					ocr_vram[ocr_off + j] = pal[pixel];
+				if ((name_ent >> 11) & 0x1) {
+					for (j = 7; j >= 0; j--) {
+						pixel = data >> 28;
+						data <<= 4;
+
+						if (pixel)
+							ocr_vram[ocr_off + j] = pal[pixel];
+					}
+
+				} else {
+					for (j = 0; j < 8; j++) {
+						pixel = data >> 28;
+						data <<= 4;
+
+						if (pixel)
+							ocr_vram[ocr_off + j] = pal[pixel];
+					}
+				}
+			} else {
+				data = *(uint32_t *)(vdp.vram + ((name_ent & 0x7ff) << 5) + (pixrow * 4));
+				__asm__ volatile ("swap.w %0, %0" : "+r" (data));
+
+				if ((name_ent >> 11) & 0x1) {
+					for (j = 7; j >= 0; j--) {
+						pixel = data >> 28;
+						data <<= 4;
+
+						if (pixel)
+							ocr_vram[ocr_off + j] = pal[pixel];
+					}
+				} else {
+					for (j = 0; j < 8; j++) {
+						pixel = data >> 28;
+						data <<= 4;
+
+						if (pixel)
+							ocr_vram[ocr_off + j] = pal[pixel];
+					}
+				}
 			}
 		}
 	}
