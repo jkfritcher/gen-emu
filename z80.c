@@ -150,7 +150,7 @@ void z80_write_mem(UINT32 addr, UINT8 val)
 			case 0x13:
 			case 0x15:
 			case 0x17:
-				Write76489(&PSG,val);
+//				Write76489(&PSG,val);
 			break;
 			}
 	} else
