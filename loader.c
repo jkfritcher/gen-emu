@@ -5,11 +5,14 @@
 
 #include "gen-emu.h"
 
+#include "md5.h"
 
 uint8_t *rom_load(char *name)
 {
 	uint8_t *rom;
 	uint32_t fd, len, cksum, i;
+	MD5_CTX ctx;
+	uint8 md5sum[16];
 
 	fd = fs_open(name, O_RDONLY);
 	if (fd == 0) {
@@ -22,6 +25,7 @@ uint8_t *rom_load(char *name)
 
 	if (debug)
 		rom = malloc(4 * 1024 * 1024);
+
 	if (strstr(name, ".bin") != NULL) {
 		if (!debug)
 			rom = malloc(len);
@@ -71,13 +75,14 @@ uint8_t *rom_load(char *name)
 	fs_write(fd, rom, len);
 	fs_close(fd);
 
-	cksum = i = 0;
-	while(i < len) {
-		cksum ^= ((uint32_t *)rom)[i/4];
-		i += 4;
-	}
+	MD5Init(&ctx);
+	MD5Update(&ctx, rom, len);
+	MD5Final(md5sum, &ctx);
 
-	printf("ROM checksum = %08x\n", cksum);
+	printf("ROM MD5 checksum = ");
+	for(i = 0; i < 16; i++)
+		printf("%02x", md5sum[i]);
+	printf("\n");
 
 	return rom;
 
