@@ -1,5 +1,5 @@
 
-# $Id: Makefile.kos,v 1.3 2002-04-25 21:43:47 jkf Exp $
+# $Id: Makefile.kos,v 1.4 2002-05-01 16:57:31 jkf Exp $
 
 # Build architecture
 KOS_ARCH = dreamcast
@@ -23,7 +23,6 @@ KOS_GENROMFS = $(KOS_BASE)/utils/genromfs/genromfs
 
 # SH-4 GCC paths
 KOS_CC = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gcc
-KOS_CCPLUS = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-g++
 KOS_AS = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-as
 KOS_AR = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-ar
 KOS_OBJCOPY = $(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-objcopy
