@@ -15,6 +15,7 @@
 
 uint8_t m68k_ram[65536];
 uint16_t *m68k_ram16 = (uint16_t *)m68k_ram;
+uint8_t bank_sram = 0;
 
 
 uint32_t m68k_read_memory_8(uint32_t addr)
@@ -23,10 +24,21 @@ uint32_t m68k_read_memory_8(uint32_t addr)
 	addr &= 0xffffff;
 
 	if (addr < 0x400000) {
-		if (!cart.banked)
+		if ((cart.sram_len > 0) &&
+			((addr >= cart.sram_start) &&
+			 (addr <= cart.sram_end))) {
+			if (!cart.sram_banked) {
+				ret = cart.sram[addr & (cart.sram_len - 1)];
+			} else {
+				if (!bank_sram) {
+					ret = cart.rom[addr];
+				} else {
+					ret = cart.sram[addr & (cart.sram_len - 1)];
+				}
+			}
+		} else {
 			ret = cart.rom[addr];
-		else
-			ret = *(uint8_t *)(cart.banks[(addr & 0x380000) >> 19] + (addr & 0x07ffff));
+		}
 	} else 
 	if (addr >= 0xe00000) {
 		ret = m68k_ram[addr & 0xffff];
@@ -171,10 +183,21 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 	addr &= 0xffffff;
 
 	if (addr < 0x400000) {
-		if (!cart.banked)
+		if ((cart.sram_len > 0) &&
+			((addr >= cart.sram_start) &&
+			 (addr <= cart.sram_end))) {
+			if (!cart.sram_banked) {
+				ret = ((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1];
+			} else {
+				if (!bank_sram) {
+					ret = ((uint16_t *)cart.rom)[addr >> 1];
+				} else {
+					ret = ((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1];
+				}
+			}
+		} else {
 			ret = ((uint16_t *)cart.rom)[addr >> 1];
-		else
-			ret = *(uint16_t *)(cart.banks[(addr & 0x380000) >> 19] + (addr & 0x07ffff));
+		}
 		SWAPBYTES16(ret);
 	} else
 	if (addr >= 0xe00000) {
@@ -311,6 +334,19 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 	if (debug)
 		printf("M68K  %06x <- %02x\n", addr, val);
 
+	if (addr < 0x400000) {
+		if ((cart.sram_len > 0) &&
+			((addr >= cart.sram_start) &&
+			 (addr <= cart.sram_end))) {
+			if (!cart.sram_banked) {
+				cart.sram[addr & (cart.sram_len - 1)] = val;
+			} else {
+				if (bank_sram) {
+					cart.sram[addr & (cart.sram_len - 1)] = val;
+				}
+			}
+		}
+	} else
 	if (addr >= 0xe00000) {
 		m68k_ram[addr & 0xffff] = val;
 	} else
@@ -334,7 +370,7 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 			case 0x13:
 			case 0x15:
 			case 0x17:
-				Write76489(&PSG,val);
+//				Write76489(&PSG,val);
 			break;
 			}
 		}
@@ -393,10 +429,9 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 	case 0xa130fb:
 	case 0xa130fd:
 	case 0xa130ff:
-		if (cart.banked) {
+		if (cart.banked)
 			cart.banks[(addr & 0xe) >> 1] = (uint32_t)(cart.rom + (val << 19));
-			break;
-		}
+		break;
 	default:
 		printf("Unhandled memory write to %06x, value %02x\n", addr, val);
 		quit = 1;
@@ -411,6 +446,21 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 	if (debug)
 		printf("M68K  %06x <- %04x\n", addr, val);
 
+	if (addr < 0x400000) {
+		if ((cart.sram_len > 0) &&
+			((addr >= cart.sram_start) &&
+			 (addr <= cart.sram_end))) {
+			if (!cart.sram_banked) {
+				SWAPBYTES16(val);
+				((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1] = val;
+			} else {
+				if (bank_sram) {
+					SWAPBYTES16(val);
+					((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1] = val;
+				}
+			}
+		}
+	} else
 	if (addr >= 0xe00000) {
 		SWAPBYTES16(val);
 		m68k_ram16[(addr & 0xffff)/2] = val;
@@ -431,7 +481,7 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 			case 0x12:
 			case 0x14:
 			case 0x16:
-				Write76489(&PSG,val&0xff);
+//				Write76489(&PSG,val&0xff);
 				break;
 			}
 		}
@@ -463,10 +513,9 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 	case 0xa130fa:
 	case 0xa130fc:
 	case 0xa130fd:
-		if (cart.banked) {
+		if (cart.banked)
 			cart.banks[(addr & 0xe) >> 1] = (uint32_t)(cart.rom + ((val & 0xff) << 19));
-			break;
-		}
+		break;
 	default:
 		printf("Unhandled memory write to %06x, value %04x\n", addr, val);
 		quit = 1;

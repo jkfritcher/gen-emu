@@ -12,6 +12,7 @@ typedef struct cart_s {
 	uint32_t	sram_end;
 	uint32_t	banks[8];
 	uint8_t		banked;
+	uint8_t		sram_banked;
 } cart_t;
 
 extern cart_t cart;

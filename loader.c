@@ -139,6 +139,8 @@ uint32_t rom_load(char *name)
 		cart.sram_len = sr_len;
 		cart.sram_start = sr_start;
 		cart.sram_end = sr_end;
+		if (cart.sram_start < cart.rom_len)
+			cart.sram_banked = 1;
 	}
 
 	/* Check the cart to see if it is Super Street Fighter 2. */
@@ -173,7 +175,8 @@ uint32_t rom_load(char *name)
 	printf("Cart details...\n");
 	printf("ROM Length: 0x%x (%d) bytes\n", cart.rom_len, cart.rom_len);
 	if (cart.sram_len)
-		printf("RAM Length: 0x%x (%d) bytes\n", cart.sram_len, cart.sram_len);
+		printf("RAM Length: 0x%x (%d) bytes%s\n", cart.sram_len, cart.sram_len,
+			   (cart.sram_banked ? ", banked" : ""));
 	if (cart.banked)
 		printf("Detected banked cartridge. Enabling banking.\n");
 
@@ -200,5 +203,6 @@ void rom_free(void)
 		cart.sram_len = 0;
 		cart.sram_start = 0;
 		cart.sram_end = 0;
+		cart.sram_banked = 0;
 	}
 }
