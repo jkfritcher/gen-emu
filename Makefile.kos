@@ -1,15 +1,15 @@
 
-# $Id: Makefile.kos,v 1.2 2002-04-24 20:25:46 jkf Exp $
+# $Id: Makefile.kos,v 1.3 2002-04-25 21:43:47 jkf Exp $
 
 # Build architecture
 KOS_ARCH = dreamcast
 
 # Compiler base strings
-KOS_CC_BASE = /usr/local/dcdev/sh-elf
+KOS_CC_BASE = /home/dcdev/sh-elf
 KOS_CC_PREFIX = sh-elf
 
 # KOS base paths
-KOS_BASE = /usr/local/dcdev/kos-1.1.7
+KOS_BASE = /home/dcdev/kos-1.1.7
 KOS_INCS = $(KOS_BASE)/include
 
 # Make utility
@@ -36,7 +36,7 @@ KOS_AFLAGS = -little
 KOS_LDFLAGS = -ml -m4-single-only -nostartfiles -nostdlib -Wl,-Ttext=0x8c010000
 
 # ARM7 GCC paths
-DC_ARM7BASE = /usr/local/dcdev/arm-elf
+DC_ARM7BASE = /home/dcdev/arm-elf
 DC_ARM7CC = $(DC_ARM7BASE)/bin/arm-elf-gcc
 DC_ARM7AS = $(DC_ARM7BASE)/bin/arm-elf-as
 DC_ARM7AR = $(DC_ARM7BASE)/bin/arm-elf-ar
