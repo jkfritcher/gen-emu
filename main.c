@@ -53,6 +53,13 @@ int main(int argc, char *argv[])
 			break;
 		case 0x4600:	/* Print Screen */
 			vid_screen_shot(scrcapname);
+			fd = fs_open("/pc/home/jkf/src/dc/gen-emu/vram.bin", O_WRONLY | O_TRUNC);
+			fs_write(fd, vdp.vram, sizeof(vdp.vram));
+			fs_close(fd);
+
+			fd = fs_open("/pc/home/jkf/src/dc/gen-emu/vsram.bin", O_WRONLY | O_TRUNC);
+			fs_write(fd, vdp.vsram, sizeof(vdp.vsram));
+			fs_close(fd);
 			break;
 		}
 	} while (!quit);
@@ -82,7 +89,9 @@ void run_one_field(void)
 	}
 
 	/* Render debug cram display. */
+#if 0
 	vdp_render_cram();
+#endif
 
 	/* Submit whole screen to pvr. */
 	do_frame();
