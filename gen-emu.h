@@ -30,4 +30,6 @@ extern uint8_t dump;
 extern uint16_t endswaps(uint16_t);
 extern uint32_t endswapl(uint32_t);
 
+#define SWAPBYTES(x)	__asm__ volatile ( "swap.b %0, %0" : "+r" (x) )
+
 #endif /* _GEN_EMU_H_ */
