@@ -422,6 +422,9 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 			/* XXX reset ym2612 */
 		}
 		break;
+	case 0xa130f1:
+		bank_sram = val & 0x01;
+		break;
 	case 0xa130f3:
 	case 0xa130f5:
 	case 0xa130f7:
