@@ -4,6 +4,8 @@
 
 #include "gen-emu.h"
 #include "cart.h"
+#include "vdp.h"
+#include "SN76489.h"
 
 #include "z80.h"
 #include "m68k.h"
@@ -64,6 +66,38 @@ UINT8 z80_read_mem(UINT32 addr)
 	} else
 	if ((addr >= 0x7f00) && (addr < 0x7f20)) {
 		/* vdp */
+		switch(addr & 0x1f) {
+		case 0x00:
+		case 0x02:
+			ret = (vdp_data_read() >> 8);
+			break;
+		case 0x01:
+		case 0x03:
+			ret = (vdp_data_read() & 0xff);
+			break;
+		case 0x04:
+		case 0x06:
+			ret = (vdp_control_read() >> 8);
+			break;
+		case 0x05:
+		case 0x07:
+			ret = (vdp_control_read() & 0xff);
+			break;
+		case 0x08:
+		case 0x0a:
+		case 0x0c:
+		case 0x0e:
+			printf("hv counter read.\n");
+			ret = (vdp_hv_read() >> 8);
+			break;
+		case 0x09:
+		case 0x0b:
+		case 0x0d:
+		case 0x0f:
+			printf("hv counter read.\n");
+			ret = (vdp_hv_read() & 0xff);
+			break;
+		}
 	} else
 	if ((addr >= 0x4000) && (addr < 0x6000)) {
 		switch(addr & 0x3) {
@@ -99,6 +133,26 @@ void z80_write_mem(UINT32 addr, UINT8 val)
 	} else
 	if ((addr >= 0x7f00) && (addr <= 0x7f1f)) {
 		/* vdp */
+			switch(addr & 0x1f) {
+			case 0x00:
+			case 0x01:
+			case 0x02:
+			case 0x03:
+				vdp_data_write((val << 8) | val);
+				break;
+			case 0x04:
+			case 0x05:
+			case 0x06:
+			case 0x07:
+				vdp_control_write((val << 8) | val);
+				break;
+			case 0x11:
+			case 0x13:
+			case 0x15:
+			case 0x17:
+				Write76489(&PSG,val);
+			break;
+			}
 	} else
 	if ((addr >= 0x4000) && (addr < 0x6000)) {
 		switch(addr & 0x3) {
