@@ -13,6 +13,7 @@
 #include "vdp.h"
 #include "input.h"
 
+extern SN76489 PSG;
 
 uint8_t m68k_ram[65536];
 uint16_t *m68k_ram16 = (uint16_t *)m68k_ram;
