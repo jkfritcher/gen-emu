@@ -1,13 +1,16 @@
 # $Id$
 
 TARGET = gen-emu.elf
-OBJS = main.o loader.o input.o SN76489.o Sound.o m68k.o z80.o vdp.o misc.o 
-OBJS += md5c.o m68k/m68k.o z80/z80.o video.o init.o
+OBJS = main.o loader.o input.o SN76489.o Sound.o m68k.o z80.o vdp.o
+OBJS += md5c.o m68k/m68k.o z80/z80.o init.o
+CFLAGS = -g3 -O0 -Wall -I/usr/local/include
+LDFLAGS = -L/usr/local/lib
+LIBS = -lSDL2
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $@ $(KOS_START) $(OBJS) $(KOS_LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 m68k/m68k.o:
 	@$(MAKE) -C m68k
@@ -19,5 +22,3 @@ clean:
 	rm -f gen-emu.elf $(OBJS)
 	@$(MAKE) -C m68k clean
 	@$(MAKE) -C z80 clean
-
-include Makefile.kos

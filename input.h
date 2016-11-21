@@ -5,6 +5,7 @@
 
 extern void ctlr_init(void);
 extern void ctlr_reset(void);
+extern void ctlr_handle_input(int, uint8_t);
 extern uint8_t ctlr_data_reg_read(int);
 extern uint8_t ctlr_ctrl_reg_read(int);
 extern void ctlr_data_reg_write(int, uint8_t);

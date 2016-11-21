@@ -11,6 +11,7 @@ extern uint8_t z80_bank_shift;
 extern uint8_t z80_running;
 extern uint8_t z80_busreq;
 
+extern int z80_irq_callback(int irqline);
 extern uint32_t z80init(void);
 extern uint32_t z80_enabled(void);
 extern void z80_dump_mem(void);

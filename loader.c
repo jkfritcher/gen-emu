@@ -1,7 +1,11 @@
 
 /* $Id$ */
 
-#include <kos.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include <SDL2/SDL.h>
 
 #include "gen-emu.h"
 #include "cart.h"
@@ -22,20 +26,20 @@ uint32_t rom_load(char *name)
 {
 	uint32_t fd, len, i;
 	uint8_t *rom = NULL;
-	uint8 md5sum[16];
+	uint8_t md5sum[16];
 	MD5_CTX ctx;
 
 	printf("Loading rom %s ... ", name);
 
-	fd = fs_open(name, O_RDONLY);
+	fd = open(name, O_RDONLY);
 	if (fd == 0) {
-		printf("rom_load(): fs_open() failed.\n");
+		printf("rom_load(): open() failed.\n");
 		goto error;
 	}
 
 	/* Get file length. */
-	len = fs_seek(fd, 0, SEEK_END);
-	fs_seek(fd, 0, SEEK_SET);
+	len = lseek(fd, 0, SEEK_END);
+	lseek(fd, 0, SEEK_SET);
 
 	if (strstr(name, ".bin") != NULL) {
 		/* Allocate ROM memory. */
@@ -46,13 +50,13 @@ uint32_t rom_load(char *name)
 			goto error;
 		}
 
-		fs_read(fd, rom, len);
+		read(fd, rom, len);
 	} else
 	if (strstr(name, ".smd") != NULL) {
 		uint8_t buf[512];
 
 		/* Read file header and check for SMD signature. */
-		fs_read(fd, buf, 512);
+		read(fd, buf, 512);
 		if ((buf[8] == 0xaa) && (buf[9] == 0xbb)) {
 			uint32_t blocks;
 			uint8_t *blk, *tmp;
@@ -84,7 +88,7 @@ uint32_t rom_load(char *name)
 			for(i = 0; i < blocks; i++) {
 				uint32_t j;
 
-				fs_read(fd, blk, 16384);
+				read(fd, blk, 16384);
 				for(j = 0; j < 8192; j++) {
 					*tmp++ = blk[j+8192];
 					*tmp++ = blk[j];
@@ -102,7 +106,7 @@ uint32_t rom_load(char *name)
 		goto error;
 	}
 
-	fs_close(fd);
+	close(fd);
 
 	printf("Done.\n");
 
@@ -116,10 +120,8 @@ uint32_t rom_load(char *name)
 		uint8_t *sram = NULL;
 
 		/* Extract saveram details from ROM header. */
-		sr_start = ((uint32_t*)rom)[0x1b4/4];
-		sr_end = ((uint32_t*)rom)[0x1b8/4];
-		SWAPBYTES32(sr_start);
-		SWAPBYTES32(sr_end);
+        sr_start = SWAPBYTES32(((uint32_t*)rom)[0x1b4/4]);
+        sr_end = SWAPBYTES32(((uint32_t*)rom)[0x1b8/4]);
 		if (sr_start % 1)
 			sr_start -= 1;
 		if (!(sr_end % 1))
@@ -186,7 +188,7 @@ error:
 	if (rom)
 		free(rom);
 	if (fd)
-		fs_close(fd);
+		close(fd);
 	return 0;
 }
 

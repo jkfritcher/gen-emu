@@ -4,9 +4,9 @@
 #define _CART_H_
 
 typedef struct cart_s {
-	uint8		*rom;
+	uint8_t		*rom;
 	uint32_t	rom_len;
-	uint8		*sram;
+	uint8_t		*sram;
 	uint32_t	sram_len;
 	uint32_t	sram_start;
 	uint32_t	sram_end;

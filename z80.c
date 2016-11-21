@@ -1,6 +1,10 @@
 /* $Id$ */
 
-#include <kos.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include <SDL2/SDL.h>
 
 #include "gen-emu.h"
 #include "cart.h"
@@ -24,15 +28,20 @@ uint8_t z80_running;
 uint8_t z80_busreq;
 
 
+int z80_irq_callback(int irqline)
+{
+    return 0xff;
+}
+
 void z80_dump_mem(void)
 {
 	int fd;
-	fd = fs_open("/pc/home/jkf/src/dc/gen-emu/z80ram.bin", O_WRONLY | O_TRUNC);
-	fs_write(fd, z80_ram, 8192);
-	fs_close(fd);
-    fd = fs_open("/pc/home/jkf/src/dc/gen-emu/dcvram.bin", O_WRONLY | O_TRUNC);
-    fs_write(fd, (char *)0x85000000, 8*1024*1024);
-    fs_close(fd);
+	fd = open("/pc/home/jkf/src/dc/gen-emu/z80ram.bin", O_WRONLY | O_TRUNC);
+	write(fd, z80_ram, 8192);
+	close(fd);
+    fd = open("/pc/home/jkf/src/dc/gen-emu/dcvram.bin", O_WRONLY | O_TRUNC);
+    write(fd, (char *)0x85000000, 8*1024*1024);
+    close(fd);
 }
 
 uint32_t z80init(void)
@@ -40,6 +49,8 @@ uint32_t z80init(void)
 	z80_init();
 
 	z80_reset(NULL);
+
+	z80_set_irq_callback(z80_irq_callback);
 
 	return 0;
 }

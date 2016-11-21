@@ -1,4 +1,9 @@
-#include <kos.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <SDL2/SDL.h>
 
 #include "gen-emu.h"
 
@@ -7,20 +12,18 @@
 #include "vdp.h"
 #include "SN76489.h"
 
-//KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS | INIT_GDB);
-KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS | INIT_OCRAM);
+#include "input.h"
 
 
-//char *romname = "/cd/sonic_1.bin";
-//char *romname = "/cd/pstar_2.bin";
-char *romname = "/cd/contra.bin";
+char *romname = "romtoload.bin";
 
 char *scrcapname = "/pc/home/jkf/src/dc/gen-emu/screen.ppm";
 
 uint8_t debug = 0;
+uint8_t vdp_debug = 0;
 uint8_t quit = 0;
 uint8_t dump = 0;
-uint8_t pause = 0;
+uint8_t paused = 0;
 
 uint32_t rom_load(char *name);
 void rom_free(void);
@@ -28,13 +31,61 @@ void run_one_field(void);
 void gen_init(void);
 void gen_reset(void);
 
+extern void video_init();
+extern void do_frame();
+
 extern SN76489 PSG; 
 extern struct vdp_s vdp;
+
+SDL_Window *window;
+SDL_Renderer *renderer;
+SDL_Texture *disp_tex;
+SDL_Rect disp_srcrect = { 0, 0, 256, 224 };
+
+uint16_t win_width = 256;
+uint16_t win_height = 224;
+
+uint16_t *pix_buf;
+int pix_pitch;
 
 
 int main(int argc, char *argv[])
 {
-	int ch, fd;
+	int fd;
+    SDL_Event event;
+
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
+       fprintf(stderr, "SDL_Init error: %s\n", SDL_GetError());
+       return -1;
+    }
+    atexit(SDL_Quit);
+
+    window = SDL_CreateWindow("Output",
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              win_width * 4, win_height * 4,
+                              SDL_WINDOW_SHOWN);
+    if (window == NULL) {
+        fprintf(stderr, "SDL_CreateWindow error: %s\n", SDL_GetError());
+        exit(-1);
+    }
+
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == NULL) {
+        fprintf(stderr, "SDL_CreateRenderer error: %s\n", SDL_GetError());
+        exit(-1);
+    }
+
+    disp_tex = SDL_CreateTexture(renderer,
+                                 SDL_PIXELFORMAT_ABGR4444,
+                                 SDL_TEXTUREACCESS_STREAMING,
+                                 512, 512);
+    if (disp_tex == NULL) {
+        fprintf(stderr, "SDL_CreateTexture error: %s\n", SDL_GetError());
+        exit(-1);
+    }
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 255, SDL_ALPHA_OPAQUE);
 
 	gen_init();
 
@@ -45,27 +96,71 @@ int main(int argc, char *argv[])
 	do {
 		run_one_field();
 
-paused:
-		ch = kbd_get_key();
-		switch(ch) {
-		case 0x000d:	/* Enter */
-			pause = !pause;
-			break;
-		case 0x0020:	/* Space */
-			quit = 1;
-			break;
-		case 0x0039:	/* 9 */
-			dump = 1;
-			break;
-		case 0x4600:	/* Print Screen */
-			vid_screen_shot(scrcapname);
-			fd = fs_open("/pc/home/jkf/src/dc/gen-emu/vdp.bin", O_WRONLY | O_TRUNC);
-			fs_write(fd, &vdp, sizeof(vdp));
-			fs_close(fd);
-			break;
-		}
-		if (pause)
-			goto paused;
+ispaused:
+        while(SDL_PollEvent(&event)) {
+            if (event.type == SDL_KEYUP) {
+                switch(event.key.keysym.sym) {
+                case SDLK_w:
+                case SDLK_s:
+                case SDLK_a:
+                case SDLK_d:
+                case SDLK_j:
+                case SDLK_k:
+                case SDLK_l:
+                case SDLK_u:
+                case SDLK_i:
+                case SDLK_o:
+                case SDLK_RETURN:
+                    ctlr_handle_input(event.key.keysym.sym, 1);
+                    break;
+                }
+            }
+
+            if (event.type == SDL_KEYDOWN) {
+                       switch(event.key.keysym.sym) {
+                case SDLK_w:
+                case SDLK_s:
+                case SDLK_a:
+                case SDLK_d:
+                case SDLK_j:
+                case SDLK_k:
+                case SDLK_l:
+                case SDLK_u:
+                case SDLK_i:
+                case SDLK_o:
+                case SDLK_RETURN:
+                    ctlr_handle_input(event.key.keysym.sym, 0);
+                    break;
+                       case SDLK_SPACE:        /* Space */
+                               paused = !paused;
+                               break;
+                       case SDLK_ESCAPE:       /* Escape */
+                               quit = 1;
+                    paused = 0;
+                               break;
+                       case SDLK_9:    /* 9 */
+                               dump = 1;
+                               break;
+                case SDLK_r:
+                    gen_reset();
+                    break;
+                case SDLK_v:
+                    vdp_debug = !vdp_debug;
+                    break;
+                       case SDLK_PRINTSCREEN:  /* Print Screen */
+                               //vid_screen_shot(scrcapname);
+                               fd = open("/pc/home/jkf/src/dc/gen-emu/vdp.bin", O_WRONLY | O_TRUNC);
+                               write(fd, &vdp, sizeof(vdp));
+                               close(fd);
+                               break;
+                       }
+            }
+        }
+               if (paused) {
+            struct timespec tm = { 0, 100000000 };
+            nanosleep(&tm, NULL);
+                   goto ispaused;
+        }
 	} while (!quit);
 
 	rom_free();
@@ -75,8 +170,18 @@ paused:
 
 void run_one_field(void)
 {
-	static int cnt;
+	static int cnt = 0;
 	int line;
+
+    if ((vdp.dis_cells * 8) != win_width) {
+        win_width = vdp.dis_cells * 8;
+        disp_srcrect.w = win_width;
+        SDL_SetWindowSize(window, win_width * 4, win_height * 4);
+    }
+
+    SDL_RenderClear(renderer);
+
+    SDL_LockTexture(disp_tex, NULL, (void **)&pix_buf, &pix_pitch);
 
 	for(line = 0; line < 262 && !quit; line++) {
 		vdp_interrupt(line);
@@ -91,19 +196,19 @@ void run_one_field(void)
 		}
 	}
 
-	/* Render debug cram display. */
-#if 0
-	vdp_render_cram();
-#endif
+    SDL_UnlockTexture(disp_tex);
 
-	/* Submit whole screen to pvr. */
-	do_frame();
+    SDL_RenderCopy(renderer, disp_tex, &disp_srcrect, NULL);
+
+    SDL_RenderPresent(renderer);
 
 	/* Send sound to ASIC, call once per frame */
-	Sync76489(&PSG,SN76489_FLUSH);
+	//Sync76489(&PSG,SN76489_FLUSH);
 
 	/* input processing */
 	cnt++;
-	if ((cnt % 60) == 0)
+	if ((cnt % 60) == 0) {
 		printf(".");
+		fflush(stdout);
+    }
 }

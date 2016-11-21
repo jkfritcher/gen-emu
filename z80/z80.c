@@ -72,7 +72,9 @@
  *		http://www.msxnet.org/tech/Z80/z80undoc.txt
  *****************************************************************************/
 
-#include <kos.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #undef _B
 #undef _C
@@ -3998,7 +4000,7 @@ void z80_init(void)
 		if( !SZHVC_add || !SZHVC_sub )
 		{
 			LOG(("Z80: failed to allocate 2 * 128K flags arrays!!!\n"));
-			arch_abort();
+            exit(-1);
 		}
 		padd = &SZHVC_add[	0*256];
 		padc = &SZHVC_add[256*256];

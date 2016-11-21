@@ -23,6 +23,7 @@ typedef volatile unsigned int		vuint32_t;
 typedef volatile unsigned long long	vuint64_t;
 
 extern uint8_t debug;
+extern uint8_t vdp_debug;
 extern uint8_t quit;
 extern uint8_t dump;
 
@@ -30,12 +31,16 @@ extern uint8_t dump;
 extern uint16_t endswaps(uint16_t);
 extern uint32_t endswapl(uint32_t);
 
-#define SWAPBYTES16(x) \
-	__asm__ volatile ("swap.b %0, %0" : "+r" (x))
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define SWAPBYTES16(x) __builtin_bswap16((x))
+#define SWAPBYTES32(x) __builtin_bswap32((x))
+#define SWAP_WORDS(x) ((((x) & 0xffff0000) >> 16) | (((x) & 0xffff) << 16))
+#else
+#define SWAPBYTES16(x) (x)
+#define SWAPBYTES32(x) (x)
+#define SWAP_WORDS(x) (x)
+#endif  /* __BYTE_ORDER__ */
 
-#define SWAPBYTES32(x) \
-	__asm__ volatile ("swap.b %0,%0" : "+r" (x)); \
-	__asm__ volatile ("swap.w %0,%0" : "+r" (x)); \
-	__asm__ volatile ("swap.b %0,%0" : "+r" (x))
+#define min(a, b) (a) < (b) ? (a) : (b)
 
 #endif /* _GEN_EMU_H_ */

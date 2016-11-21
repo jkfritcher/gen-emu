@@ -31,6 +31,7 @@ struct vdp_s
 	uint8_t sc_width;
 	uint8_t sc_height;
 	uint8_t dis_cells;
+    uint8_t sat_dirty;
 };
 
 

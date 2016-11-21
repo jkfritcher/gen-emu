@@ -1,6 +1,6 @@
 /* $Id$ */
 
-#include <kos.h>
+#include <SDL2/SDL.h>
 
 #include "gen-emu.h"
 #include "cart.h"
@@ -186,23 +186,18 @@ uint32_t m68k_read_memory_16(uint32_t addr)
 		if ((cart.sram_len > 0) &&
 			((addr >= cart.sram_start) &&
 			 (addr <= cart.sram_end))) {
-			if (!cart.sram_banked) {
+			if (!cart.sram_banked || bank_sram) {
 				ret = ((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1];
 			} else {
-				if (!bank_sram) {
-					ret = ((uint16_t *)cart.rom)[addr >> 1];
-				} else {
-					ret = ((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1];
-				}
+                ret = ((uint16_t *)cart.rom)[addr >> 1];
 			}
 		} else {
 			ret = ((uint16_t *)cart.rom)[addr >> 1];
 		}
-		SWAPBYTES16(ret);
+		ret = SWAPBYTES16(ret);
 	} else
 	if (addr >= 0xe00000) {
-		ret = m68k_ram16[(addr & 0xffff) >> 1];
-		SWAPBYTES16(ret);
+        ret = SWAPBYTES16(m68k_ram16[(addr & 0xffff) >> 1]);
 	} else
 	if ((addr >= 0xc00000) && (addr <= 0xdfffff)) {
 		/* vdp  & psg */
@@ -419,6 +414,7 @@ void m68k_write_memory_8(uint32_t addr, uint32_t val)
 			if (!z80_busreq)
 //				z80_dump_mem();
 			z80_reset(NULL);
+            z80_set_irq_callback(z80_irq_callback);
 			/* XXX reset ym2612 */
 		}
 		break;
@@ -454,19 +450,18 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 			((addr >= cart.sram_start) &&
 			 (addr <= cart.sram_end))) {
 			if (!cart.sram_banked) {
-				SWAPBYTES16(val);
+				val = SWAPBYTES16(val);
 				((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1] = val;
 			} else {
 				if (bank_sram) {
-					SWAPBYTES16(val);
+					val = SWAPBYTES16(val);
 					((uint16_t *)cart.sram)[(addr & (cart.sram_len - 1)) >> 1] = val;
 				}
 			}
 		}
 	} else
 	if (addr >= 0xe00000) {
-		SWAPBYTES16(val);
-		m68k_ram16[(addr & 0xffff)/2] = val;
+        m68k_ram16[(addr & 0xffff)/2] = SWAPBYTES16(val);
 	} else
 	if ((addr >= 0xc00000) && (addr <= 0xdfffff)) {
 		/* vdp & psg */
@@ -506,6 +501,7 @@ void m68k_write_memory_16(uint32_t addr, uint32_t val)
 			if (!z80_busreq)
 //				z80_dump_mem();
 			z80_reset(NULL);
+            z80_set_irq_callback(z80_irq_callback);
 			/* XXX reset ym2612 */
 		}
 		break;

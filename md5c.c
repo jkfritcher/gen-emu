@@ -28,7 +28,7 @@
  * edited for clarity and style only.
  */
 
-#include <kos.h>
+#include <SDL2/SDL.h>
 
 #include <sys/types.h>
 

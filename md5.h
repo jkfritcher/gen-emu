@@ -26,6 +26,8 @@ documentation and/or software.
 
 #ifndef _SYS_MD5_H_
 #define _SYS_MD5_H_
+typedef uint32_t uint32;
+
 /* MD5 context. */
 typedef struct MD5Context {
   uint32 state[4];	/* state (ABCD) */
