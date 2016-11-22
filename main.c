@@ -70,7 +70,8 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    //renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == NULL) {
         fprintf(stderr, "SDL_CreateRenderer error: %s\n", SDL_GetError());
         exit(-1);
@@ -206,9 +207,4 @@ void run_one_field(void)
 	//Sync76489(&PSG,SN76489_FLUSH);
 
 	/* input processing */
-	cnt++;
-	if ((cnt % 60) == 0) {
-		printf(".");
-		fflush(stdout);
-    }
 }

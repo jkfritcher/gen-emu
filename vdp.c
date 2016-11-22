@@ -420,17 +420,14 @@ struct spr_ent_s {
 
 void vdp_render_sprites2(int line, int priority)
 {
-    uint8_t max_sprites = vdp.dis_cells == 40 ? 80 : 64;
     static struct spr_ent_s spr_list[80] = { {0} };
     static uint8_t spr_list_len = 0;
     static uint8_t spr_this_field = 0;
 
+    uint8_t max_sprites = vdp.dis_cells == 40 ? 80 : 64;
 
-    if (line == 0) {
+    if (line == 0 && priority == 0) {
         spr_this_field = 0;
-    }
-
-    if (vdp.sat_dirty) {
         int i = 0, j = 0;
         while (j < max_sprites && i < max_sprites) {
             uint8_t *spr_ent_raw = (uint8_t *)&(vdp.sat[i]);
